@@ -1,6 +1,6 @@
 # 001: Initial architecture
 
-- **Status:** Accepted
+- **Status:** Accepted; the frontend part is superseded by [002](002-web-app-frontend.md) (web app served by the engine)
 - **Date:** 2026-10-10
 
 ## Context

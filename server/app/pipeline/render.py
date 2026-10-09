@@ -105,18 +105,15 @@ def video_command(
     w, h, fps = settings.render_width, settings.render_height, settings.render_fps
     cmd = [settings.ffmpeg_path, "-y", "-hide_banner", "-nostats", "-progress", "pipe:1"]
 
-    if background.builtin == "life":
+    if background.file is None:
+        # No clip: the same gradient and "floor" band the app previews (VideoFrame).
+        top, bottom = (c.lstrip("#") for c in background.gradient)
         cmd += [
-            "-f",
-            "lavfi",
-            "-i",
-            f"life=s={w // 6}x{h // 6}:mold=12:r={fps}:ratio=0.12:"
-            "life_color=#5BA300:death_color=#0E0E12:mold_color=#24242E",
-        ]
-        bg_chain = f"[0:v]scale={w}:{h}:flags=neighbor,setsar=1,fps={fps}[bg]"
-    elif background.builtin == "plain":
-        cmd += ["-f", "lavfi", "-i", f"color=c=0x0E0E12:s={w}x{h}:r={fps}"]
-        bg_chain = "[0:v]setsar=1[bg]"
+            "-f", "lavfi", "-i",
+            f"gradients=s={w}x{h}:r={fps}:c0=0x{top}:c1=0x{bottom}:x0=0:y0=0:x1=0:y1={h}:speed=0",
+        ]  # fmt: skip
+        floor_y = round(h * 0.64)
+        bg_chain = f"[0:v]drawbox=x=0:y={floor_y}:w={w}:h={h - floor_y}:color=white@0.05:t=fill,setsar=1[bg]"
     else:
         offset = 0.0
         if background.duration_s and background.duration_s > total + 1:

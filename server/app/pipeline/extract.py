@@ -53,6 +53,27 @@ def clean_text(raw: str) -> str:
     return re.sub(r"\s{2,}", " ", text).strip()
 
 
+def extract_text(raw: str, max_chars: int) -> Extracted:
+    """Pasted notes or a .txt/.md file. Keeps sentences, drops markdown symbols."""
+    text = re.sub(r"^\s{0,3}(#{1,6}|[-*+]|\d+[.)])\s+", "", raw, flags=re.M)  # headings, bullets
+    text = re.sub(r"[*_`]{1,3}", "", text)
+    text = clean_text(text)
+    if len(text) < 40:
+        raise ExtractError("That's too little text to make a video from. Paste a few sentences or more.")
+    if len(text) > max_chars:
+        raise ExtractError(f"That's over {max_chars:,} characters. Paste one topic at a time.")
+    return Extracted(text=text, page_count=0)
+
+
+def decode_text_file(data: bytes) -> str:
+    if data.startswith((b"\xff\xfe", b"\xfe\xff")):
+        return data.decode("utf-16")
+    try:
+        return data.decode("utf-8-sig")
+    except UnicodeDecodeError:
+        return data.decode("cp1252", errors="replace")
+
+
 def extract_pdf(data: bytes, pages: str | None, max_pages: int) -> Extracted:
     try:
         doc = pymupdf.open(stream=data, filetype="pdf")

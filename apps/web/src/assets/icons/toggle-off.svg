@@ -1,0 +1,5 @@
+<!-- Not in Figma (only the ON state is designed). Off state drawn to match toggle-on.svg. -->
+<svg width="48" height="28" viewBox="0 0 48 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+<rect width="48" height="28" rx="14" fill="#D5E3D7"/>
+<circle cx="14" cy="14" r="11" fill="#FCFDFB"/>
+</svg>

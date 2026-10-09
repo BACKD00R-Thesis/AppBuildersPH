@@ -1,6 +1,6 @@
 """Run the whole pipeline on a PDF from the command line and print the MP4 path.
 
-Usage: python -m app.scripts.render_sample path/to/file.pdf [--pages 1-5] [--background builtin-life]
+Usage: python -m app.scripts.render_sample path/to/file.pdf [--pages 1-5] [--background parkour]
        python -m app.scripts.render_sample --script lines.txt   (skip the LLM; "Name: text" per line)
 """
 
@@ -42,7 +42,7 @@ def main() -> None:
     parser.add_argument("pdf", type=Path, nargs="?")
     parser.add_argument("--pages")
     parser.add_argument("--script", type=Path, help="text file of 'Name: line' to use instead of the LLM")
-    parser.add_argument("--background", default="builtin-life")
+    parser.add_argument("--background", default="parkour")
     args = parser.parse_args()
     if not args.pdf and not args.script:
         parser.error("give a PDF, --script, or both")

@@ -10,7 +10,7 @@ from app.db import get_session
 from app.deps import require_token
 from app.models import Line
 from app.pipeline.tts import TTSError, wav_duration
-from app.schemas import PreviewOut
+from app.schemas import API_PREFIX, AudioOut
 
 router = APIRouter(prefix="/lines", tags=["lines"], dependencies=[Depends(require_token)])
 
@@ -22,12 +22,12 @@ def get_line(line_id: str, session: Session) -> Line:
     return line
 
 
-@router.post("/{line_id}/preview", response_model=PreviewOut)
+@router.post("/{line_id}/preview", response_model=AudioOut)
 def preview(
     line_id: str,
     session: Session = Depends(get_session),
     settings: Settings = Depends(get_settings),
-) -> PreviewOut:
+) -> AudioOut:
     """Synthesize one saved line (or reuse its cached audio) and return a URL to play it."""
     line = get_line(line_id, session)
     character = workflow.characters_by_id(settings).get(line.character_id)
@@ -38,7 +38,9 @@ def preview(
     except TTSError as exc:
         raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, str(exc)) from exc
     # The key in the URL busts any player cache when the text changes.
-    return PreviewOut(audio_url=f"/lines/{line.id}/audio?v={line.audio_key}", duration_s=wav_duration(path))
+    return AudioOut(
+        audio_url=f"{API_PREFIX}/lines/{line.id}/audio?v={line.audio_key}", duration_s=wav_duration(path)
+    )
 
 
 @router.get("/{line_id}/audio")

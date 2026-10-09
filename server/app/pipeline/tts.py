@@ -1,11 +1,15 @@
 """Text-to-speech adapter: Kokoro (default), Piper (lighter), or dummy (no models needed).
 
-Every engine writes a mono 16-bit WAV. Models load once and are reused.
+Every engine writes a mono 16-bit WAV. Models load once and are reused. Speech is
+kept at 2.5-3 words per second so the captions it drives stay readable: clips
+outside that range are time-stretched (pitch preserved) with FFmpeg.
 """
 
 import hashlib
 import importlib.util
+import logging
 import math
+import subprocess
 import threading
 import wave
 from array import array
@@ -14,8 +18,16 @@ from pathlib import Path
 from app.assets import Character
 from app.config import Settings
 
+log = logging.getLogger(__name__)
+
 ENGINES = ("kokoro", "piper", "dummy")
 DEFAULT_KOKORO_VOICE = "am_michael"
+
+# Readable caption pace (words per second). Changing these re-synthesizes cached clips.
+MIN_WPS, MAX_WPS, TARGET_WPS = 2.5, 3.0, 2.75
+# Very short lines ("Wait, what?") are mostly silence padding; their rate isn't meaningful.
+MIN_WORDS_TO_PACE = 4
+PACE_VERSION = f"pace-{MIN_WPS}-{MAX_WPS}"
 
 
 class TTSError(RuntimeError):
@@ -41,7 +53,7 @@ def voice_for(character: Character, settings: Settings) -> str:
 
 def audio_key(text: str, character: Character, settings: Settings) -> str:
     """Identifies a synthesized clip, so unchanged lines reuse cached audio."""
-    raw = f"{settings.tts_engine}|{voice_for(character, settings)}|{text}"
+    raw = f"{settings.tts_engine}|{voice_for(character, settings)}|{PACE_VERSION}|{text}"
     return hashlib.sha256(raw.encode("utf-8")).hexdigest()[:16]
 
 
@@ -63,7 +75,38 @@ def synthesize(text: str, character: Character, out_path: Path, settings: Settin
             _piper(text, voice, out_path, settings)
         else:
             _dummy(text, character, out_path)
+    pace_clip(out_path, len(text.split()), settings)
     return wav_duration(out_path)
+
+
+def speech_rate(path: Path, word_count: int) -> float:
+    return word_count / max(wav_duration(path), 0.01)
+
+
+def pace_clip(path: Path, word_count: int, settings: Settings) -> None:
+    """Time-stretch a clip into MIN_WPS..MAX_WPS words per second, keeping its pitch."""
+    if word_count < MIN_WORDS_TO_PACE:
+        return
+    rate = speech_rate(path, word_count)
+    if MIN_WPS <= rate <= MAX_WPS:
+        return
+    # atempo > 1 speeds up; playing at TARGET_WPS/rate turns `rate` into TARGET_WPS.
+    tempo = min(max(TARGET_WPS / rate, 0.5), 2.0)
+    tmp = path.with_suffix(".paced.wav")
+    try:
+        subprocess.run(
+            [
+                settings.ffmpeg_path, "-y", "-hide_banner", "-loglevel", "error",
+                "-i", str(path), "-filter:a", f"atempo={tempo:.4f}", "-c:a", "pcm_s16le", str(tmp),
+            ],
+            check=True,
+            capture_output=True,
+        )  # fmt: skip
+        tmp.replace(path)
+    except (OSError, subprocess.CalledProcessError) as exc:
+        # Pacing is a readability improvement, not a requirement: keep the original clip.
+        log.warning("Couldn't adjust speech pace for %s: %s", path, exc)
+        tmp.unlink(missing_ok=True)
 
 
 def _kokoro(text: str, voice: str, out_path: Path) -> None:
@@ -82,7 +125,7 @@ def _kokoro(text: str, voice: str, out_path: Path) -> None:
         pipeline = KPipeline(lang_code=lang)
         _kokoro_pipelines[lang] = pipeline
     chunks = []
-    for _, _, audio in pipeline(text, voice=voice, speed=1.05):
+    for _, _, audio in pipeline(text, voice=voice, speed=1.0):
         if audio is not None:
             chunks.append(audio.numpy() if hasattr(audio, "numpy") else np.asarray(audio))
     if not chunks:
@@ -111,13 +154,13 @@ def _piper(text: str, voice: str, out_path: Path, settings: Settings) -> None:
             piper_voice.synthesize(text, wav)
 
 
-def _dummy(text: str, character: Character, out_path: Path) -> None:
-    """A soft blip per word at a speech-like pace. For development without TTS models."""
+def _dummy(text: str, character: Character, out_path: Path, words_per_second: float = TARGET_WPS) -> None:
+    """A soft blip per word at a readable pace. For development without TTS models."""
     rate = 24000
     words = text.split() or ["…"]
-    per_word = 0.3
+    per_word = 1.0 / words_per_second
     pitch = 520.0 if character.role == "asker" else 330.0
-    samples = array("h", [0] * int(rate * (len(words) * per_word + 0.2)))
+    samples = array("h", [0] * int(rate * len(words) * per_word))
     blip = int(rate * 0.08)
     for i in range(len(words)):
         start = int(rate * i * per_word)

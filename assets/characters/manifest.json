@@ -1,20 +1,24 @@
 [
   {
-    "id": "dex",
-    "name": "Dex",
+    "id": "tito-boy",
+    "name": "Tito Boy",
     "role": "asker",
-    "persona": "An excitable, easily confused student who asks short, blunt questions, mixes up terms, and reacts with over-the-top surprise.",
-    "color": "#3BC8FF",
+    "vibe": "Loud and slow",
+    "persona": "A loud, friendly Filipino tito who takes his time, asks short and slightly clueless questions, and reacts with big surprise.",
+    "color": "#D5E3D7",
+    "sample": "Bunso, ano ba 'to? Explain it to your tito, slowly!",
     "voices": { "kokoro": "am_michael", "piper": "piper/en_US-ryan-medium.onnx" },
-    "image": "dex.png"
+    "image": "tito-boy.png"
   },
   {
-    "id": "nova",
-    "name": "Prof. Nova",
+    "id": "bunso",
+    "name": "Bunso",
     "role": "explainer",
-    "persona": "A smug, theatrical genius who explains everything in one or two short sentences using everyday analogies, and can't resist a light roast.",
-    "color": "#FFB23B",
-    "voices": { "kokoro": "bm_george", "piper": "piper/en_GB-alan-medium.onnx" },
-    "image": "nova.png"
+    "vibe": "Fast and smug",
+    "persona": "The smug, quick-talking youngest sibling who explains everything in one or two short sentences with everyday Filipino analogies, and can't resist a light roast.",
+    "color": "#8FB59E",
+    "sample": "Easy lang, Tito. I'll explain it in ten seconds.",
+    "voices": { "kokoro": "af_heart", "piper": "piper/en_US-amy-medium.onnx" },
+    "image": "bunso.png"
   }
 ]

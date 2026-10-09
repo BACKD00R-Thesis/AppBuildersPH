@@ -34,15 +34,15 @@ We use [Conventional Commits](https://www.conventionalcommits.org/):
 ```
 
 - Types: `feat`, `fix`, `docs`, `refactor`, `test`, `chore`, `perf`.
-- Scopes: `mobile`, `server`, `pipeline`, `docs`, `ci`.
-- Examples: `feat(pipeline): add word-level ASS captions`, `fix(mobile): keep script edits after app reload`.
+- Scopes: `web`, `server`, `pipeline`, `docs`, `ci`.
+- Examples: `feat(pipeline): add word-level ASS captions`, `fix(web): keep script edits after app reload`.
 
 One logical change per commit. Don't mix formatting changes with behavior changes.
 
 ## Pull requests
 
 1. Open a PR against `main`. Use a draft PR if you want early feedback.
-2. Title follows the commit format (`feat(mobile): ...`).
+2. Title follows the commit format (`feat(web): ...`).
 3. Description includes:
    - **What** changed and **why** (link the issue: `Closes #12`).
    - **How to test** it, step by step.
@@ -75,7 +75,7 @@ One logical change per commit. Don't mix formatting changes with behavior change
 
 ## Issues
 
-- Use labels: `bug`, `feature`, `docs`, `good first issue`, plus `mobile` or `server`.
+- Use labels: `bug`, `feature`, `docs`, `good first issue`, plus `web` or `server`.
 - Bugs include steps to reproduce, expected vs. actual behavior, and device/OS.
 - Assign yourself before starting work so two people don't take the same task.
 

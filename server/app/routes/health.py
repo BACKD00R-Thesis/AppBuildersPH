@@ -25,6 +25,7 @@ def health(
     }
     return {
         "ok": True,
+        "user_name": settings.user_name.strip(),
         "auth_required": bool(settings.api_pairing_token),
         "auth_ok": token_matches(x_pairing_token, settings),
         "engines": engines,

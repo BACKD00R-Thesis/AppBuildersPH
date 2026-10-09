@@ -40,6 +40,8 @@ def isolated_settings(tmp_path, monkeypatch) -> Iterator[None]:
     monkeypatch.setenv("DATABASE_URL", f"sqlite:///{(tmp_path / 'test.db').as_posix()}")
     monkeypatch.setenv("TTS_ENGINE", "dummy")
     monkeypatch.setenv("API_PAIRING_TOKEN", "")
+    monkeypatch.setenv("USER_NAME", "")
+    monkeypatch.setenv("WEB_DIST_DIR", str(tmp_path / "no-web-build"))
     get_settings.cache_clear()
     get_engine.cache_clear()
     yield

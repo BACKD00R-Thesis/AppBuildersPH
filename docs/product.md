@@ -4,7 +4,7 @@ The single source of truth for what we are building and why. If a feature isn't 
 
 ## Elevator pitch
 
-An open-source, 100% local AI mobile app that turns boring study PDFs into short, ultra-digestible "brainrot" educational videos: a comedic dialogue between two characters, with word-by-word captions, over gameplay footage.
+An open-source, 100% local AI app, for laptop and phone, that turns boring study PDFs into short, ultra-digestible "brainrot" educational videos: Tito Boy and Bunso explain the material in a comedic Taglish dialogue, with word-by-word captions, over gameplay footage.
 
 ## Problem
 
@@ -22,7 +22,7 @@ An open-source, 100% local AI mobile app that turns boring study PDFs into short
 
 ## Solution
 
-An offline-first React Native app paired with a local AI backend. It ingests a PDF, converts the key concepts into an ELI5 dialogue between two personas, and renders a fully composited 9:16 video with animated captions. Every model runs on the user's own machine or local network.
+A web app served by a local AI engine on the student's laptop, usable from the laptop or from a phone on the same Wi-Fi. It ingests a PDF or pasted notes, picks out the key ideas, turns them into an ELI5 dialogue between Tito Boy (asks) and Bunso (explains), and renders a fully composited 9:16 video with animated captions. Every model runs on the user's own machine. The screens follow the Figma file linked in [design.md](design.md).
 
 ## Core user flow
 
@@ -30,10 +30,10 @@ An offline-first React Native app paired with a local AI backend. It ingests a P
 [ Upload PDF / notes ] ──> [ Edit AI script ] ──> [ Customize style ] ──> [ Export & watch ]
 ```
 
-1. **Upload.** The user taps to import a lecture deck, paper, or textbook chapter (PDF). They can optionally pick the pages or section to cover.
-2. **Script generation.** The local LLM extracts the core concepts and writes a dialogue. One character asks simple, slightly clueless questions; the other gives concise ELI5 answers with everyday analogies.
-3. **Customize and preview.** The user reviews each line, edits text, reorders or deletes lines, taps a line to hear a voice preview, and picks a background clip.
-4. **Render and export.** The backend synthesizes the audio, aligns word-level timestamps, burns in captions, and renders a 9:16 MP4. The user watches it in-app and can save or share it.
+1. **Upload.** The user picks a lecture deck, paper, or textbook chapter (PDF, .txt or .md) or pastes notes, chooses a length (30, 60 or 90 seconds) and whether to use Taglish. On a laptop, dropping a file on "Make a video" starts right away.
+2. **Script generation.** The local LLM finds the key ideas (3, 5 or 8 by length), then writes a dialogue: Tito Boy asks short, slightly clueless questions; Bunso gives concise ELI5 answers with everyday analogies. The app shows each step while it works.
+3. **Customize and preview.** The user taps a line to edit it, adds lines, plays any line in its voice, hears a sample of each voice, and picks a background and caption style (Bold pop, Clean, Outline) with a live preview.
+4. **Render and export.** The engine voices the lines, aligns word-level timestamps, burns in captions, and renders a 9:16 MP4 while the app shows progress. The user watches it with the key ideas listed beside it, then downloads or shares it.
 
 ## Features
 
@@ -41,22 +41,25 @@ An offline-first React Native app paired with a local AI backend. It ingests a P
 
 | Feature | Description |
 |---|---|
-| PDF import | Pick a PDF from the device; extract its text. |
-| ELI5 dialogue engine | Generate a two-character script (target 45 to 90 seconds of speech) from the extracted text. |
-| Script editor | Edit, delete, and reorder lines; regenerate the whole script. |
-| Voice preview | Synthesize and play a single line on demand. |
-| Background picker | Choose from a few bundled gameplay clips. |
-| Brainrot captions | Word-by-word highlighted captions, timed to the audio. |
-| Render and export | Produce a 1080x1920 MP4 and show render progress. |
-| Video library | List past renders on the device and replay them. |
+| Sources | PDF, .txt or .md file, or pasted notes. |
+| Length and language | 30, 60 or 90 seconds; English or Taglish (English explanations, Filipino reactions). |
+| ELI5 dialogue engine | Key ideas first, then a Tito Boy and Bunso script that covers them in order. |
+| Script editor | Edit lines inline (saved automatically), add lines, regenerate the whole script. Clearing a line's text removes it. |
+| Voice preview | Play any line, or a sample of each voice. |
+| Style | Four backgrounds (clip or matching gradient), three caption styles, live 9:16 preview. |
+| Brainrot captions | Two-line captions with the spoken word in mustard, at a readable 2.5 to 3 words per second. |
+| Render and export | 1080x1920 MP4 with step-by-step progress; download, share (phones), or open the folder (laptop). |
+| Library | Every video with its status; the newest finished one featured on the phone's Home. |
+| Key ideas | "What this video covers" next to the player. |
 
 ### Post-MVP
 
-- Regenerate a single line instead of the whole script.
+- Regenerate a single line instead of the whole script; reorder and switch speakers in the editor.
 - Custom personas: name, personality prompt, voice, and image.
-- Import from images (OCR) and plain text, not only PDF.
+- Import from images (OCR) and slides (.pptx).
 - Split long documents into a series of short episodes.
-- Quiz cards generated from the same script.
+- Quiz cards generated from the key ideas.
+- Installable PWA, and the Engine and Library-tab screens once they're designed.
 - Fully on-device mode for high-end phones (no laptop needed).
 
 ## Requirements
@@ -87,7 +90,7 @@ An offline-first React Native app paired with a local AI backend. It ingests a P
 
 ## Risks and open questions
 
-- **Character IP.** The pitch references Peter and Stewie Griffin. Those characters, and voice clones of their actors, are copyrighted. For the public repo and any release, we ship original personas with stock TTS voices; recognizable characters stay out of the codebase.
+- **Character IP.** The pitch references Peter and Stewie Griffin. Those characters, and voice clones of their actors, are copyrighted. We ship original personas, Tito Boy and Bunso, with stock TTS voices; recognizable characters stay out of the codebase.
 - **Gameplay footage licensing.** Minecraft parkour and Subway Surfers clips belong to their publishers. We bundle only footage we recorded ourselves or that is licensed for reuse, and let users add their own clips locally.
 - **Accuracy.** Small 3B models can oversimplify or get facts wrong. The script editor exists so the user can fix this; we should also show a short disclaimer on generated scripts.
 - **Phone vs. laptop.** The MVP runs the AI backend on a laptop on the same network. Fully on-device inference is a post-MVP goal. See [decisions/001-initial-architecture.md](decisions/001-initial-architecture.md).

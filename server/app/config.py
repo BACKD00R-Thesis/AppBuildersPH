@@ -23,12 +23,18 @@ class Settings(BaseSettings):
     api_pairing_token: str = ""
     api_cors_origins: str = ""
 
+    # Shown in the greeting ("Kumusta, <name>!"). One local user per laptop, so it lives here.
+    user_name: str = ""
+
     data_dir: Path = REPO_ROOT / "data"
     models_dir: Path = REPO_ROOT / "models"
     assets_dir: Path = REPO_ROOT / "assets"
+    # The built web app (apps/web: npm run build). Served at / when present.
+    web_dist_dir: Path = REPO_ROOT / "apps" / "web" / "dist"
     database_url: str = ""
 
-    ollama_host: str = "http://localhost:11434"
+    # 127.0.0.1, not "localhost": on Windows, localhost tries IPv6 first and each call stalls ~2s.
+    ollama_host: str = "http://127.0.0.1:11434"
     ollama_model: str = "llama3.2:3b"
     ollama_timeout_s: float = 180.0
 
@@ -51,6 +57,7 @@ class Settings(BaseSettings):
     # Product limits (docs/product.md, FR-1)
     max_pdf_pages: int = 50
     max_pdf_bytes: int = 20 * 1024 * 1024
+    max_notes_chars: int = 60_000
 
     @property
     def db_url(self) -> str:

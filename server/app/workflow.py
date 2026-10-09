@@ -14,7 +14,7 @@ from sqlmodel import Session, select
 
 from app.assets import Character, get_pair, load_backgrounds, load_characters
 from app.config import Settings
-from app.models import Line, Project, ProjectStatus, Render, RenderStatus
+from app.models import Line, Project, ProjectStatus, Render, RenderStatus, ScriptStep
 from app.pipeline import align, captions, render, script, tts
 
 log = logging.getLogger(__name__)
@@ -35,18 +35,39 @@ def characters_by_id(settings: Settings) -> dict[str, Character]:
 # --- Script -----------------------------------------------------------------
 
 
+NOTES_TITLE = "Pasted notes"
+
+
+def default_title(source_name: str | None) -> str:
+    """Title before the model names the topic: the file name without extension."""
+    if not source_name:
+        return NOTES_TITLE
+    return Path(source_name).stem.replace("_", " ").strip()[:120] or NOTES_TITLE
+
+
 def generate_script(session: Session, project_id: str, settings: Settings) -> None:
     project = session.get(Project, project_id)
     if project is None:
         return
+
+    def on_step(step: str) -> None:
+        project.script_step = ScriptStep(step)
+        project.updated_at = datetime.now(UTC)
+        session.add(project)
+        session.commit()
+
     try:
         asker, explainer = get_pair(load_characters(settings))
-        result = script.generate_script(project.extracted_text, asker, explainer, settings)
+        options = script.ScriptOptions(length_s=project.length_s, taglish=project.taglish)
+        result = script.generate_script(
+            project.extracted_text, asker, explainer, settings, options=options, on_step=on_step
+        )
     except (script.ScriptError, RuntimeError) as exc:
         # Keep an existing script editable if a regeneration fails.
         has_lines = bool(ordered_lines(session, project_id))
         project.status = ProjectStatus.SCRIPTED if has_lines else ProjectStatus.FAILED
         project.error = str(exc)
+        project.script_step = None
         project.updated_at = datetime.now(UTC)
         session.add(project)
         session.commit()
@@ -56,10 +77,14 @@ def generate_script(session: Session, project_id: str, settings: Settings) -> No
         session.delete(old)
     for i, line in enumerate(result.lines):
         session.add(Line(project_id=project_id, position=i, character_id=line.character_id, text=line.text))
-    if result.title and project.title.lower().endswith(".pdf"):
+    # Replace the file-name title with the model's, unless the user renamed it.
+    if result.title and project.title == default_title(project.source_name):
         project.title = result.title
+    project.subject = result.subject or project.subject
+    project.key_ideas = result.key_ideas
     project.status = ProjectStatus.SCRIPTED
     project.error = None
+    project.script_step = None
     project.updated_at = datetime.now(UTC)
     session.add(project)
     session.commit()
@@ -81,6 +106,7 @@ def ensure_line_audio(session: Session, line: Line, character: Character, settin
         Path(line.audio_path).with_suffix(".words.json").unlink(missing_ok=True)
     line.audio_path = str(path)
     line.audio_key = key
+    line.audio_duration_s = round(tts.wav_duration(path), 2)
     session.add(line)
     session.commit()
     return path
@@ -155,7 +181,12 @@ def run_render(session: Session, render_id: str, settings: Settings, cancel: thr
         segments, total = render.build_segments(timeline)
         captions_path = work_dir / "captions.ass"
         captions_path.write_text(
-            captions.build_ass(segments, settings.render_width, settings.render_height),
+            captions.build_ass(
+                segments,
+                settings.render_width,
+                settings.render_height,
+                style=job.style_options.get("caption_style") or captions.DEFAULT_STYLE,
+            ),
             encoding="utf-8",
         )
 

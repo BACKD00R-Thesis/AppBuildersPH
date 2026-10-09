@@ -1,0 +1,80 @@
+@import 'tailwindcss';
+
+/*
+ * Design tokens from the Figma style sheet ("Style sheet / Laptop v2").
+ * The default Tailwind palette is switched off on purpose: use these names only.
+ */
+@theme {
+  --color-*: initial;
+  --color-white: #ffffff;
+  --color-black: #000000;
+
+  /* Style sheet swatches */
+  --color-green: #1e4a35; /* Header, primary */
+  --color-green-2: #2f6b4f; /* Hover, chips, eyebrow text */
+  --color-green-3: #8fb59e; /* Progress track */
+  --color-page: #f4f7f3; /* Background */
+  --color-mint: #e8efe8; /* Rows, Tito Boy */
+  --color-mint-line: #d5e3d7; /* Borders */
+  --color-card: #fcfdfb; /* Cards, Bunso */
+  --color-ink: #17221c; /* Text */
+  --color-muted: #5e6b63; /* Secondary text */
+  --color-mustard: #e8b23a; /* The one highlight */
+  --color-clay: #c97a4a; /* Arches only */
+  --color-clay-2: #e0a06e; /* Arches only */
+
+  /* Used in the screens but not on the style sheet */
+  --color-clay-deep: #b86d40; /* inner arch on clay */
+  --color-clay-2-deep: #d3925f; /* inner arch on clay-2 */
+  --color-on-green: #b9d2c2; /* secondary text on a green header */
+  --color-video: #151a14; /* video base, caption outline */
+
+  --font-serif: 'Playfair Display', Georgia, serif; /* headings and big numbers only */
+  --font-sans: 'Plus Jakarta Sans', system-ui, sans-serif; /* everything you read or click */
+  --font-caption: 'Archivo Black', Impact, sans-serif; /* video captions only */
+
+  --shadow-card: 0 10px 28px 0 rgb(30 74 53 / 0.1); /* laptop cards */
+  --shadow-card-sm: 0 8px 24px 0 rgb(30 74 53 / 0.1); /* mobile cards */
+
+  --radius-card: 20px;
+  --radius-input: 14px;
+}
+
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    background: var(--color-page);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    font-weight: 500;
+    /* Figma text uses "auto" line height unless a screen sets one. */
+    line-height: normal;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  button {
+    cursor: pointer;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-green-2);
+    outline-offset: 2px;
+  }
+}
+
+@layer components {
+  /* Small caps label: "BIOLOGY 101", "VOICES", "TITO BOY". */
+  .eyebrow {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 1.44px;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+}

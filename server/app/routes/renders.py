@@ -1,3 +1,5 @@
+import subprocess
+import sys
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -26,6 +28,12 @@ def get_render(render_id: str, session: Session) -> Render:
     return render
 
 
+def finished_video(render: Render) -> Path:
+    if render.status != RenderStatus.DONE or not render.output_path or not Path(render.output_path).exists():
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Video isn't ready")
+    return Path(render.output_path)
+
+
 @router.post("/projects/{project_id}/renders", response_model=RenderOut, status_code=status.HTTP_202_ACCEPTED)
 def start_render(
     project_id: str,
@@ -33,16 +41,23 @@ def start_render(
     session: Session = Depends(get_session),
     settings: Settings = Depends(get_settings),
 ) -> RenderOut:
+    """Render with the given style, or the project's saved style. The choice is saved on the project."""
     project = get_project(project_id, session)
     if project.status == ProjectStatus.GENERATING:
-        raise HTTPException(status.HTTP_409_CONFLICT, "Wait for the script to finish generating")
+        raise HTTPException(status.HTTP_409_CONFLICT, "Wait for the script to finish")
     if not workflow.ordered_lines(session, project_id):
         raise HTTPException(status.HTTP_409_CONFLICT, "The script is empty")
-    if body.background_id and body.background_id not in {b.id for b in load_backgrounds(settings)}:
-        raise HTTPException(
-            status.HTTP_422_UNPROCESSABLE_CONTENT, f"Unknown background '{body.background_id}'"
-        )
-    render = Render(project_id=project_id, style_options={"background_id": body.background_id})
+    background_id = body.background_id or project.background_id
+    if background_id and background_id not in {b.id for b in load_backgrounds(settings)}:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, f"Unknown background '{background_id}'")
+    caption_style = body.caption_style or project.caption_style
+    project.background_id = background_id
+    project.caption_style = caption_style
+    session.add(project)
+    render = Render(
+        project_id=project_id,
+        style_options={"background_id": background_id, "caption_style": str(caption_style)},
+    )
     session.add(render)
     session.commit()
     session.refresh(render)
@@ -70,12 +85,33 @@ def cancel_render(render_id: str, session: Session = Depends(get_session)) -> Re
 
 
 @router.get("/renders/{render_id}/video")
-def video(render_id: str, session: Session = Depends(get_session)) -> FileResponse:
+def video(render_id: str, download: bool = False, session: Session = Depends(get_session)) -> FileResponse:
+    """The MP4. `?download=1` asks the browser to save it instead of playing it."""
     render = get_render(render_id, session)
-    if render.status != RenderStatus.DONE or not render.output_path or not Path(render.output_path).exists():
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "Video isn't ready")
+    path = finished_video(render)
     project = get_project(render.project_id, session)
     safe_title = (
         "".join(ch if ch.isalnum() or ch in " -_" else "_" for ch in project.title).strip() or "video"
     )
-    return FileResponse(render.output_path, media_type="video/mp4", filename=f"{safe_title}.mp4")
+    return FileResponse(
+        path,
+        media_type="video/mp4",
+        filename=f"{safe_title}.mp4",
+        content_disposition_type="attachment" if download else "inline",
+    )
+
+
+@router.post("/renders/{render_id}/reveal", status_code=status.HTTP_204_NO_CONTENT)
+def reveal(render_id: str, session: Session = Depends(get_session)) -> None:
+    """Show the MP4 in the file manager of the computer running the server ("Open folder")."""
+    path = finished_video(get_render(render_id, session))
+    if sys.platform == "win32":
+        command = ["explorer", f"/select,{path}"]
+    elif sys.platform == "darwin":
+        command = ["open", "-R", str(path)]
+    else:
+        command = ["xdg-open", str(path.parent)]
+    try:
+        subprocess.Popen(command)  # noqa: S603  (fixed command, path from our own data dir)
+    except OSError as exc:
+        raise HTTPException(status.HTTP_501_NOT_IMPLEMENTED, "Couldn't open a file manager here") from exc

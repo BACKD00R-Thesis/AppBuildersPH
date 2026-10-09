@@ -31,15 +31,46 @@ class RenderStatus(StrEnum):
     CANCELED = "canceled"
 
 
+class ScriptStep(StrEnum):
+    """Progress of script generation, shown on the "Writing script" screen."""
+
+    IDEAS = "ideas"  # finding the key ideas
+    JOKES = "jokes"  # writing the dialogue
+    CHECK = "check"  # validating the lines
+
+
+class CaptionStyle(StrEnum):
+    BOLD_POP = "bold-pop"
+    CLEAN = "clean"
+    OUTLINE = "outline"
+
+
+VIDEO_LENGTHS = (30, 60, 90)
+
+
 class Project(SQLModel, table=True):
     id: str = Field(default_factory=_id, primary_key=True)
     title: str
+    subject: str | None = None  # short course label from the LLM, e.g. "Biology"
     status: ProjectStatus = ProjectStatus.READY
     error: str | None = None
+    # Source: an uploaded PDF or text file, or pasted notes ("source_kind" = pdf | text | notes).
+    source_kind: str = "pdf"
+    source_name: str | None = None
     pdf_path: str
     page_count: int
     pages: str | None = None  # page selection used for extraction, e.g. "1-5"
     extracted_text: str
+    # Options chosen before writing the script
+    length_s: int = 60
+    taglish: bool = True
+    # Script generation progress and results
+    script_step: ScriptStep | None = None
+    script_started_at: datetime | None = None
+    key_ideas: list[str] = Field(default_factory=list, sa_column=Column(JSON))
+    # Style last chosen for this video (the next render uses it)
+    background_id: str | None = None
+    caption_style: CaptionStyle = CaptionStyle.BOLD_POP
     created_at: datetime = Field(default_factory=_now)
     updated_at: datetime = Field(default_factory=_now)
 
@@ -53,6 +84,7 @@ class Line(SQLModel, table=True):
     # Cached preview/render audio; cleared whenever text or character changes.
     audio_path: str | None = None
     audio_key: str | None = None
+    audio_duration_s: float | None = None
 
 
 class Render(SQLModel, table=True):

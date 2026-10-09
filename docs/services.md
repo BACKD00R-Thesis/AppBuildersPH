@@ -73,16 +73,18 @@ Before adding any hosted service, write a decision record in [decisions/](decisi
 | Library | Purpose |
 |---|---|
 | PyMuPDF | Extracts text from uploaded PDFs |
-| FastAPI | The API. Its OpenTelemetry hooks (added in 0.143) are switched off in `app/main.py` |
-| Expo modules (`expo-document-picker`, `expo-audio`, `expo-video`, `expo-file-system`, `expo-sharing`) | File picking, audio and video playback, saving and sharing renders on the phone |
-| AsyncStorage | Remembers the server address and pairing token on the phone |
+| FastAPI | The API, and serves the built web app. Its OpenTelemetry hooks (added in 0.143) are switched off in `app/main.py` |
+| React, React Router, Tailwind CSS 4, Vite | The web app (`apps/web`) |
+| `@fontsource/*` | Bundled fonts (Playfair Display, Plus Jakarta Sans, Archivo Black) so the app needs no font CDN |
+
+The app uses only standard browser features: `fetch`, `<audio>`, `<video>`, file inputs, downloads, and the Web Share API (on phones that support sharing files).
 
 ## Development-only services
 
 | Service | Purpose | Notes |
 |---|---|---|
 | GitHub | Source hosting, issues, PRs, Actions CI | CI runs lint and tests only; it never needs model weights |
-| Expo Go | Running the app on a phone during development | No Expo account required for local development |
+| npm registry | Installing the web app's dependencies | Only at install time; the built app runs offline |
 | Figma | UI design | Link in [design.md](design.md) |
 
 ## Adding a service
@@ -90,4 +92,4 @@ Before adding any hosted service, write a decision record in [decisions/](decisi
 1. Confirm it runs fully locally (or write a decision record explaining why it can't).
 2. Add a section here: purpose, how we call it, install link, env vars.
 3. Add its variables to [.env.example](../.env.example) and [development.md](development.md).
-4. Add it to the `/health` check.
+4. Add it to the `/api/health` check (the laptop sidebar's engine card reads it).

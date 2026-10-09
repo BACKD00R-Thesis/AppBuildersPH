@@ -1,3 +1,4 @@
+import { useRef, useState } from 'react'
 import { Navigate, useNavigate, useParams } from 'react-router-dom'
 import { Avatar } from '../../components/Avatar'
 import { Button } from '../../components/Button'
@@ -18,15 +19,32 @@ import { useProject } from '../../lib/useProject'
 export function Style() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const { backgrounds, defaultBackground, playVoiceSample } = useStore()
+  const { backgrounds, defaultBackground, playVoiceSample, uploadBackground, background: backgroundOf } = useStore()
   const { project, video, notFound, updateStyle, startRender, error, setError } = useProject(id)
   const playing = usePlaying()
+  const backgroundInput = useRef<HTMLInputElement | null>(null)
+  const [backgroundUploading, setBackgroundUploading] = useState(false)
 
   if (notFound) return <Navigate to="/" replace />
   if (!project || !video) return null
 
   const background = project.background_id ?? defaultBackground
   const firstLine = project.lines[0]?.text
+
+  const onBackgroundFile = async (file: File | null) => {
+    if (!file) return
+    setBackgroundUploading(true)
+    setError(null)
+    try {
+      const uploaded = await uploadBackground(file)
+      await updateStyle({ background_id: uploaded.id })
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err))
+    } finally {
+      setBackgroundUploading(false)
+      if (backgroundInput.current) backgroundInput.current.value = ''
+    }
+  }
 
   return (
     <MobileShell
@@ -107,6 +125,7 @@ export function Style() {
         <div role="radiogroup" aria-label="Background" className="flex gap-[10px]">
           {backgrounds.map((bg) => {
             const selected = background === bg.id
+            const preview = backgroundOf(bg.id).previewUrl
             return (
               <button
                 key={bg.id}
@@ -117,16 +136,42 @@ export function Style() {
                 className="flex w-[76px] min-w-0 shrink flex-col items-start gap-[6px]"
               >
                 <span
-                  className={cn('block aspect-[76/96] w-full rounded-[14px]', selected && 'ring-green ring-3')}
+                  className={cn('relative block aspect-[76/96] w-full overflow-hidden rounded-[14px]', selected && 'ring-green ring-3')}
                   style={{ backgroundImage: `linear-gradient(to bottom, ${bg.from}, ${bg.to})` }}
-                />
-                <span className={cn('text-[12px] whitespace-nowrap', selected ? 'text-ink font-semibold' : 'text-muted')}>
+                >
+                  {preview && (
+                    <video
+                      src={preview}
+                      className="absolute inset-0 size-full object-cover"
+                      autoPlay
+                      muted
+                      loop
+                      playsInline
+                    />
+                  )}
+                </span>
+                <span className={cn('w-full text-[12px] leading-[14px] break-all', selected ? 'text-ink font-semibold' : 'text-muted')}>
                   {bg.short_name}
                 </span>
               </button>
             )
           })}
         </div>
+        <input
+          ref={backgroundInput}
+          type="file"
+          accept="video/mp4,video/quicktime,video/webm,.mp4,.mov,.m4v,.webm"
+          className="hidden"
+          onChange={(event) => onBackgroundFile(event.currentTarget.files?.[0] ?? null)}
+        />
+        <Button
+          variant="ghost"
+          className="w-full px-4 py-[12px]"
+          disabled={backgroundUploading}
+          onClick={() => backgroundInput.current?.click()}
+        >
+          {backgroundUploading ? 'Adding…' : 'Add your own background'}
+        </Button>
       </div>
 
       <div className="flex w-full shrink-0 flex-col gap-[10px]">

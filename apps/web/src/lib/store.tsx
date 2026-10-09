@@ -21,8 +21,16 @@ interface Store {
   /** Display name from the engine's USER_NAME setting; empty when not set. */
   userName: string
   backgrounds: Background[]
-  background: (id: BackgroundId | null | undefined) => { name: string; shortName: string; from: string; to: string }
+  background: (id: BackgroundId | null | undefined) => {
+    name: string
+    shortName: string
+    from: string
+    to: string
+    previewUrl?: string
+  }
   defaultBackground: BackgroundId
+  reloadBackgrounds: () => Promise<Background[]>
+  uploadBackground: (file: File) => Promise<Background>
   draft: NewVideoDraft
   updateDraft: (patch: Partial<NewVideoDraft>) => void
   /** Upload the file (or notes) and start writing the script. Resolves with the new video id. */
@@ -66,6 +74,18 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     return () => clearInterval(id)
   }, [reloadVideos, busy])
 
+  const reloadBackgrounds = useCallback(async () => {
+    const next = await api.backgrounds()
+    setBackgrounds(next)
+    return next
+  }, [])
+
+  const uploadBackground = useCallback(async (file: File) => {
+    const background = await api.uploadBackground(file)
+    await reloadBackgrounds()
+    return background
+  }, [reloadBackgrounds])
+
   // Engine status for the sidebar card and greeting; backgrounds once.
   useEffect(() => {
     const load = () =>
@@ -74,17 +94,25 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         .then(setHealth, () => setHealth(null))
         .finally(() => setHealthChecked(true))
     load()
-    api.backgrounds().then(setBackgrounds, () => {})
+    reloadBackgrounds().catch(() => {})
     const id = setInterval(load, 20000)
     return () => clearInterval(id)
-  }, [])
+  }, [reloadBackgrounds])
 
   const defaultBackground = backgrounds[0]?.id ?? 'parkour'
 
   const background = useCallback<Store['background']>(
     (id) => {
       const bg = backgrounds.find((b) => b.id === id)
-      return bg ? { name: bg.name, shortName: bg.short_name, from: bg.from, to: bg.to } : fallbackBackground
+      return bg
+        ? {
+            name: bg.name,
+            shortName: bg.short_name,
+            from: bg.from,
+            to: bg.to,
+            previewUrl: bg.preview_url ? api.mediaUrl(bg.preview_url) : undefined,
+          }
+        : fallbackBackground
     },
     [backgrounds],
   )
@@ -126,6 +154,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       backgrounds,
       background,
       defaultBackground,
+      reloadBackgrounds,
+      uploadBackground,
       draft,
       updateDraft,
       startNewVideo,
@@ -141,6 +171,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       backgrounds,
       background,
       defaultBackground,
+      reloadBackgrounds,
+      uploadBackground,
       draft,
       updateDraft,
       startNewVideo,

@@ -79,6 +79,8 @@ export interface Background {
   from: string
   to: string
   has_clip: boolean
+  is_custom: boolean
+  preview_url?: string
 }
 
 export interface Character {
@@ -178,6 +180,11 @@ export const api = {
   health: () => request<Health>('/health'),
   characters: () => request<Character[]>('/assets/characters'),
   backgrounds: () => request<Background[]>('/assets/backgrounds'),
+  uploadBackground(file: File) {
+    const form = new FormData()
+    form.append('file', file, file.name)
+    return request<Background>('/assets/backgrounds', { method: 'POST', body: form })
+  },
 
   listProjects: () => request<ProjectSummary[]>('/projects'),
   getProject: (id: string) => request<Project>(`/projects/${id}`),

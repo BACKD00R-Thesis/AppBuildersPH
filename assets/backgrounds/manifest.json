@@ -3,7 +3,10 @@
     "id": "parkour",
     "name": "Parkour run",
     "short_name": "Parkour",
-    "gradient": ["#3b4a2e", "#151a14"],
+    "gradient": [
+      "#3b4a2e",
+      "#151a14"
+    ],
     "file": "parkour.mp4",
     "duration_s": 300
   },
@@ -11,7 +14,10 @@
     "id": "kart",
     "name": "Kart race",
     "short_name": "Kart race",
-    "gradient": ["#2e4146", "#121719"],
+    "gradient": [
+      "#2e4146",
+      "#121719"
+    ],
     "file": "kart.mp4",
     "duration_s": 300
   },
@@ -19,7 +25,10 @@
     "id": "blocks",
     "name": "Block break",
     "short_name": "Blocks",
-    "gradient": ["#4a3a2e", "#18140f"],
+    "gradient": [
+      "#4a3a2e",
+      "#18140f"
+    ],
     "file": "blocks.mp4",
     "duration_s": 300
   },
@@ -27,8 +36,23 @@
     "id": "soap",
     "name": "Soap cut",
     "short_name": "Soap cut",
-    "gradient": ["#3a3346", "#141218"],
+    "gradient": [
+      "#3a3346",
+      "#141218"
+    ],
     "file": "soap.mp4",
     "duration_s": 300
+  },
+  {
+    "id": "custom-minecraft-parkour",
+    "name": "Minecraft_Parkour",
+    "short_name": "Minecraft_Parkour",
+    "gradient": [
+      "#3b4a2e",
+      "#151a14"
+    ],
+    "file": "custom-minecraft-parkour.mp4",
+    "duration_s": 300,
+    "custom": true
   }
 ]

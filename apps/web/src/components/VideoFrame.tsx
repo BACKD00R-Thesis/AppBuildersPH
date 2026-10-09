@@ -55,6 +55,16 @@ export function VideoFrame({
         containerType: fluidWidth ? 'inline-size' : undefined,
       }}
     >
+      {bg.previewUrl && (
+        <video
+          src={bg.previewUrl}
+          className="absolute inset-0 size-full object-cover"
+          autoPlay
+          muted
+          loop
+          playsInline
+        />
+      )}
       <div className="absolute inset-x-0 top-[64%] bottom-0 bg-white/5" />
       <div
         className="font-caption absolute left-1/2 flex -translate-x-1/2 flex-col items-center text-center whitespace-nowrap uppercase"

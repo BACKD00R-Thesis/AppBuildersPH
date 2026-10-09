@@ -43,16 +43,21 @@ class Background:
     gradient: tuple[str, str]  # top and bottom colors, "#RRGGBB"
     file: Path | None = None  # gameplay clip, if present
     duration_s: float | None = None
+    custom: bool = False
 
     def public(self) -> dict:
-        return {
+        body = {
             "id": self.id,
             "name": self.name,
             "short_name": self.short_name,
             "from": self.gradient[0],
             "to": self.gradient[1],
             "has_clip": self.file is not None,
+            "is_custom": self.custom,
         }
+        if self.custom and self.file is not None:
+            body["preview_url"] = f"/api/assets/backgrounds/{self.id}/video"
+        return body
 
 
 def _read_manifest(path: Path) -> list[dict]:
@@ -119,6 +124,7 @@ def load_backgrounds(settings: Settings) -> list[Background]:
                 gradient=(colors[0], colors[1]),
                 file=clip if clip and clip.exists() else None,
                 duration_s=entry.get("duration_s"),
+                custom=bool(entry.get("custom")) or str(entry["id"]).startswith("custom-"),
             )
         )
     return backgrounds

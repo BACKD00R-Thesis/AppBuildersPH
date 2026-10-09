@@ -1,3 +1,4 @@
+import { useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Avatar } from '../../components/Avatar'
 import { BackButton } from '../../components/BackButton'
@@ -23,12 +24,14 @@ import { scriptSeconds } from '../../lib/videos'
 export function Workspace() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const { backgrounds, defaultBackground, playVoiceSample } = useStore()
+  const { backgrounds, defaultBackground, playVoiceSample, uploadBackground, background: backgroundOf } = useStore()
   const handle = useProject(id)
   const { project, video, error, setError, notFound, updateStyle, regenerate, startRender } = handle
   const editing = useScriptEditing(handle)
   const secondsLeft = useSecondsLeft(project)
   const playing = usePlaying()
+  const backgroundInput = useRef<HTMLInputElement | null>(null)
+  const [backgroundUploading, setBackgroundUploading] = useState(false)
 
   if (notFound) {
     return (
@@ -63,6 +66,21 @@ export function Workspace() {
   const onRender = async () => {
     if (!(await editing.save())) return
     if (await startRender()) navigate(`/videos/${project.id}/rendering`)
+  }
+
+  const onBackgroundFile = async (file: File | null) => {
+    if (!file) return
+    setBackgroundUploading(true)
+    setError(null)
+    try {
+      const uploaded = await uploadBackground(file)
+      await updateStyle({ background_id: uploaded.id })
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err))
+    } finally {
+      setBackgroundUploading(false)
+      if (backgroundInput.current) backgroundInput.current.value = ''
+    }
   }
 
   return (
@@ -157,6 +175,7 @@ export function Workspace() {
               <div role="radiogroup" aria-label="Background" className="flex w-full flex-wrap gap-3">
                 {backgrounds.map((bg) => {
                   const selected = background === bg.id
+                  const preview = backgroundOf(bg.id).previewUrl
                   return (
                     <button
                       key={bg.id}
@@ -167,12 +186,23 @@ export function Workspace() {
                       className="flex flex-col items-start gap-[6px]"
                     >
                       <span
-                        className={cn('block h-[70px] w-[122px] rounded-[14px]', selected && 'ring-green ring-3')}
+                        className={cn('relative block h-[70px] w-[122px] overflow-hidden rounded-[14px]', selected && 'ring-green ring-3')}
                         style={{ backgroundImage: `linear-gradient(to bottom, ${bg.from}, ${bg.to})` }}
-                      />
+                      >
+                        {preview && (
+                          <video
+                            src={preview}
+                            className="absolute inset-0 size-full object-cover"
+                            autoPlay
+                            muted
+                            loop
+                            playsInline
+                          />
+                        )}
+                      </span>
                       <span
                         className={cn(
-                          'text-[13px] whitespace-nowrap',
+                          'w-[122px] text-[13px] leading-[15px] break-all',
                           selected ? 'text-ink font-semibold' : 'text-muted',
                         )}
                       >
@@ -182,6 +212,21 @@ export function Workspace() {
                   )
                 })}
               </div>
+              <input
+                ref={backgroundInput}
+                type="file"
+                accept="video/mp4,video/quicktime,video/webm,.mp4,.mov,.m4v,.webm"
+                className="hidden"
+                onChange={(event) => onBackgroundFile(event.currentTarget.files?.[0] ?? null)}
+              />
+              <Button
+                variant="ghost"
+                className="w-full px-4 py-[12px]"
+                disabled={backgroundUploading}
+                onClick={() => backgroundInput.current?.click()}
+              >
+                {backgroundUploading ? 'Adding…' : 'Add your own background'}
+              </Button>
             </div>
 
             <div className="flex w-full flex-col gap-[10px]">

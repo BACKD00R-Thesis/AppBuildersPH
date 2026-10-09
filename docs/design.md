@@ -69,7 +69,7 @@ Fonts are bundled with the app (no runtime downloads) via `expo-font`.
 The rendered video has its own style, independent of app theme.
 
 - **Frame:** 1080x1920, 9:16, 30 fps.
-- **Layout:** background gameplay fills the frame; the speaking character sits in the upper-middle third; captions sit just above the vertical center so platform UI doesn't cover them.
+- **Layout:** background gameplay fills the frame; the speaking character (520 px tall, top at y=290) sits in the upper third with their name above; captions are centered at y=1000, just below the character, so platform UI doesn't cover them.
 - **Captions:** heavy sans (Montserrat ExtraBold or similar, bundled), around 90 px, white fill, 8 px black outline, uppercase. The active word turns `primary` (`#B6FF3B`) with a slight scale-up. One to three words on screen at a time.
 - **Safe zones:** keep captions and characters out of the bottom 320 px and the right 140 px, where TikTok/Reels/Shorts overlay their buttons.
 

@@ -1,0 +1,20 @@
+[
+  {
+    "id": "dex",
+    "name": "Dex",
+    "role": "asker",
+    "persona": "An excitable, easily confused student who asks short, blunt questions, mixes up terms, and reacts with over-the-top surprise.",
+    "color": "#3BC8FF",
+    "voices": { "kokoro": "am_michael", "piper": "piper/en_US-ryan-medium.onnx" },
+    "image": "dex.png"
+  },
+  {
+    "id": "nova",
+    "name": "Prof. Nova",
+    "role": "explainer",
+    "persona": "A smug, theatrical genius who explains everything in one or two short sentences using everyday analogies, and can't resist a light roast.",
+    "color": "#FFB23B",
+    "voices": { "kokoro": "bm_george", "piper": "piper/en_GB-alan-medium.onnx" },
+    "image": "nova.png"
+  }
+]

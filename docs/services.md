@@ -35,11 +35,18 @@ Before adding any hosted service, write a decision record in [decisions/](decisi
 | **How we call it** | Python package or CLI, one ONNX voice model per character |
 | **Env vars** | `TTS_ENGINE=piper`, `PIPER_VOICE_A`, `PIPER_VOICE_B`, `MODELS_DIR` |
 
+### Dummy TTS: development only
+
+| | |
+|---|---|
+| **Purpose** | A soft beep per word at a speech-like pace, so the full pipeline (previews, captions, renders) works before any model is downloaded |
+| **Env vars** | `TTS_ENGINE=dummy` |
+
 ### faster-whisper: word-level timestamps
 
 | | |
 |---|---|
-| **Purpose** | Transcribes each synthesized line to get the start and end time of every word, used to time the captions |
+| **Purpose** | Transcribes each synthesized line to get the start and end time of every word, used to time the captions. Optional: without it, word timing is estimated from word length |
 | **How we call it** | Python package, in-process, `word_timestamps=True` |
 | **Models** | `base` (fast), `small` (default, more accurate) |
 | **Env vars** | `WHISPER_MODEL`, `WHISPER_DEVICE` (`cpu` or `cuda`), `WHISPER_COMPUTE_TYPE` (`int8`, `float16`) |
@@ -66,7 +73,9 @@ Before adding any hosted service, write a decision record in [decisions/](decisi
 | Library | Purpose |
 |---|---|
 | PyMuPDF | Extracts text from uploaded PDFs |
-| Expo modules (`expo-document-picker`, `expo-av`, `expo-file-system`, `expo-sharing`) | File picking, audio and video playback, saving and sharing renders on the phone |
+| FastAPI | The API. Its OpenTelemetry hooks (added in 0.143) are switched off in `app/main.py` |
+| Expo modules (`expo-document-picker`, `expo-audio`, `expo-video`, `expo-file-system`, `expo-sharing`) | File picking, audio and video playback, saving and sharing renders on the phone |
+| AsyncStorage | Remembers the server address and pairing token on the phone |
 
 ## Development-only services
 

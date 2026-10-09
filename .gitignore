@@ -23,6 +23,9 @@ node_modules/
 dist/
 web-build/
 
+# Test / tooling output
+.playwright-mcp/
+
 # OS / editor
 .DS_Store
 Thumbs.db

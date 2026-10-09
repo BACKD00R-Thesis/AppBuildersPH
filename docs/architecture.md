@@ -54,43 +54,54 @@ flowchart LR
 
 | Part | Responsibility |
 |---|---|
-| Screens | Home/library, Upload, Script editor, Style picker, Render progress, Player |
-| API client | Typed wrapper over the REST API; reads the base URL from `EXPO_PUBLIC_API_URL` |
-| Server connection | First-run screen to enter or scan the laptop's address; health check |
-| Local library | Downloaded MP4s and their metadata stored on the device |
-| Styling | NativeWind (Tailwind classes), tokens from [design.md](design.md) |
+| Screens (`src/app/`, Expo Router) | Library (`index`), Server settings, Upload (`new`), Script editor (`project/[id]`), Style picker (`project/[id]/style`), Render progress and result (`render/[id]`), Player for saved videos (`watch`) |
+| API client (`src/lib/api.ts`) | Typed wrapper over the REST API; sends the pairing token header |
+| Server connection (`src/lib/server.tsx`) | Address and token, saved with AsyncStorage, prefilled from `EXPO_PUBLIC_API_URL`; the Settings screen tests `/health` |
+| Polling (`src/lib/hooks.ts`) | Reloads on screen focus; polls while a script or render is in progress |
+| Local library (`src/lib/library.ts`) | Downloaded MP4s plus a `library.json` index in the app's document directory |
+| Media | `expo-audio` for line previews, `expo-video` for playback, `expo-sharing` for share |
+| Styling | NativeWind 4 (Tailwind 3 classes), tokens from [design.md](design.md) in `tailwind.config.js` |
 
 ### Local API (`server/app`)
 
 | Module | Responsibility |
 |---|---|
-| `routes/` | REST endpoints (see below) |
-| `pipeline/extract.py` | PDF to clean text with PyMuPDF; page selection; chunking for long documents |
-| `pipeline/script.py` | Prompting Ollama for a JSON dialogue; validating and repairing the output |
-| `pipeline/tts.py` | Engine adapter for Kokoro or Piper; one WAV per line |
-| `pipeline/align.py` | faster-whisper word timestamps for each line's audio |
-| `pipeline/captions.py` | Builds an ASS subtitle file with word-by-word highlight |
-| `pipeline/render.py` | FFmpeg command builder: background loop, character overlays, audio, captions |
-| `jobs.py` | In-process background job queue with progress and cancellation |
-| `db.py`, `models.py` | SQLite via SQLModel |
+| `routes/` | REST endpoints (see below); `deps.py` checks the pairing token |
+| `pipeline/extract.py` | PDF to clean text with PyMuPDF; page selection; page and size limits |
+| `pipeline/script.py` | Prompting Ollama with a JSON schema (`prompts/dialogue.txt`); validating, cleaning, and retrying the output |
+| `pipeline/tts.py` | Engine adapter for Kokoro, Piper, or a `dummy` engine for development; one cached WAV per line |
+| `pipeline/align.py` | faster-whisper word timestamps for each line, mapped onto the script's own words; estimated timing as a fallback |
+| `pipeline/captions.py` | Builds an ASS subtitle file with word-by-word highlight and speaker labels |
+| `pipeline/render.py` | FFmpeg commands: audio mix (gaps, loudness), background, character overlays, burned-in captions; progress and cancel |
+| `workflow.py` | Runs the steps in order and records progress on the job |
+| `jobs.py` | One background worker thread; cancellation; marks interrupted work as failed on restart |
+| `assets.py` | Loads characters and background clips from `assets/*/manifest.json`; built-in backgrounds |
+| `db.py`, `models.py`, `schemas.py` | SQLite via SQLModel; API request/response shapes |
+| `scripts/` | CLI tools: `init_db`, `download_models`, `script_sample`, `render_sample`, `make_placeholder_characters` |
 
-### API surface (initial)
+### API surface
+
+Interactive docs: `http://<server>:8000/docs`. When `API_PAIRING_TOKEN` is set, every endpoint except `/health` needs the `X-Pairing-Token` header (or `?token=` for media URLs).
 
 | Method & path | Purpose |
 |---|---|
-| `GET /health` | Liveness, plus which engines are reachable |
-| `POST /projects` | Upload a PDF; creates a project and extracts text |
-| `GET /projects/{id}` | Project with its current script |
-| `POST /projects/{id}/script` | Generate (or regenerate) the dialogue |
-| `PUT /projects/{id}/script` | Save the user's edited lines |
-| `POST /lines/{id}/preview` | Synthesize one line; returns an audio URL |
-| `POST /projects/{id}/renders` | Start a render with style options |
-| `GET /renders/{id}` | Status and progress (polled by the app) |
-| `DELETE /renders/{id}` | Cancel a running render |
-| `GET /renders/{id}/video` | Download the MP4 |
-| `GET /assets/backgrounds`, `GET /assets/characters` | Available clips and personas |
+| `GET /health` | Liveness, engine status, and whether the token is accepted |
+| `GET /projects` | All projects with their latest render |
+| `POST /projects` | Upload a PDF (multipart: `file`, optional `title`, `pages`); extracts text |
+| `GET /projects/{id}` | Project with its script and renders |
+| `PATCH /projects/{id}` | Rename |
+| `DELETE /projects/{id}` | Delete the project and its files |
+| `POST /projects/{id}/script` | Start generating (or regenerating) the dialogue; returns 202 |
+| `PUT /projects/{id}/script` | Save edited lines in order (existing ids keep their cached audio) |
+| `POST /lines/{id}/preview` | Synthesize one saved line; returns an audio URL |
+| `GET /lines/{id}/audio` | The line's WAV |
+| `POST /projects/{id}/renders` | Start a render with a `background_id`; returns 202 |
+| `GET /renders/{id}` | Status, current step, and progress (polled by the app) |
+| `DELETE /renders/{id}` | Cancel a queued or running render |
+| `GET /renders/{id}/video` | The MP4 |
+| `GET /assets/characters`, `GET /assets/characters/{id}/image`, `GET /assets/backgrounds` | Personas and clips |
 
-Long-running work (script generation, render) returns a job ID immediately; the app polls for progress. WebSockets can replace polling later if needed.
+Long-running work (script generation, render) returns immediately; the app polls the project or render. WebSockets can replace polling later if needed.
 
 ## Data flow: PDF to video
 
@@ -136,31 +147,29 @@ sequenceDiagram
 
 ```mermaid
 erDiagram
-  PROJECT ||--|| DOCUMENT : has
   PROJECT ||--o{ LINE : contains
   PROJECT ||--o{ RENDER : produces
   CHARACTER ||--o{ LINE : speaks
   BACKGROUND ||--o{ RENDER : used_in
 
   PROJECT {
-    uuid id
+    string id
     string title
     string status
+    string error
+    string pdf_path
+    int page_count
+    string pages
+    text extracted_text
     datetime created_at
   }
-  DOCUMENT {
-    uuid id
-    string file_path
-    int page_count
-    text extracted_text
-  }
   LINE {
-    uuid id
+    string id
     int position
-    uuid character_id
+    string character_id
     text text
     string audio_path
-    json word_timestamps
+    string audio_key
   }
   CHARACTER {
     string id
@@ -177,16 +186,18 @@ erDiagram
     float duration_s
   }
   RENDER {
-    uuid id
+    string id
     string status
+    string step
     float progress
     json style_options
     string output_path
+    float duration_s
     text error
   }
 ```
 
-`CHARACTER` and `BACKGROUND` are loaded from files in `assets/` at startup; the rest are SQLite tables.
+`CHARACTER` and `BACKGROUND` are read from `assets/*/manifest.json`; the rest are SQLite tables. The source PDF lives on the project row (one PDF per project). A line's `audio_key` hashes its text, engine, and voice, so editing a line invalidates only that line's audio; word timestamps are cached next to the WAV as `.words.json`.
 
 ## Integrations
 
@@ -194,15 +205,15 @@ All integrations are local processes or libraries. Details and configuration are
 
 | Integration | How we call it |
 |---|---|
-| Ollama | HTTP API at `OLLAMA_HOST`, `format: json` for structured output |
-| Kokoro-TTS / Piper | Python library (Kokoro) or CLI/library (Piper), selected by `TTS_ENGINE` |
+| Ollama | HTTP API at `OLLAMA_HOST`; `format` is a JSON schema so the reply is structured |
+| Kokoro-TTS / Piper | Python libraries, selected by `TTS_ENGINE` (`dummy` for development without models) |
 | faster-whisper | Python library, model chosen by `WHISPER_MODEL` |
 | FFmpeg | Subprocess, binary at `FFMPEG_PATH` |
 | PyMuPDF | Python library for PDF text extraction |
 
 ## Cross-cutting concerns
 
-- **Privacy:** the API binds to the LAN only. No outbound calls; CI should fail if a dependency adds telemetry we can't turn off.
+- **Privacy:** the API binds to the LAN only. No outbound calls; FastAPI's built-in OpenTelemetry hooks are switched off in `app/main.py`. CI should fail if a dependency adds telemetry we can't turn off.
 - **Security:** the API has no user accounts. A shared pairing token (`API_PAIRING_TOKEN`) keeps other devices on the same network from using it.
 - **Errors:** each pipeline step writes its error to the job record; the app shows it and offers a retry from the failed step.
 - **Storage:** everything lives under `DATA_DIR`; deleting a project deletes its folder.

@@ -37,23 +37,25 @@ Upload a lecture PDF, let a local LLM rewrite it as an ELI5 conversation, tweak 
 
 ## Quickstart
 
-You need Node.js 20+, Python 3.11+, FFmpeg, and Ollama installed. Full steps are in [docs/development.md](docs/development.md).
+You need Node.js 20+, Python 3.11 or 3.12, FFmpeg, and Ollama installed. Full steps are in [docs/development.md](docs/development.md).
 
 ```bash
-cp .env.example .env            # fill in values for your machine
+cp .env.example .env            # blank values use sensible defaults
 ollama pull llama3.2:3b
 
 # Local API
 cd server
 python -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
-pip install -r requirements.txt
+pip install -r requirements.txt -r requirements-engines.txt
 uvicorn app.main:app --host 0.0.0.0 --port 8000
 
 # Mobile app (new terminal)
 cd apps/mobile
 npm install
-npx expo start
+npx expo start                  # scan the QR code with Expo Go
 ```
+
+In the app, tap the gear icon and enter your computer's LAN address (for example `http://192.168.1.23:8000`). To try the flow before downloading voice models, set `TTS_ENGINE=dummy` in `.env`.
 
 ## Documentation
 
@@ -70,19 +72,27 @@ npx expo start
 
 ## Project layout
 
-The code directories below are the planned layout; they will be filled in as the build starts.
-
 ```
 project-root/
 ├── apps/
-│   └── mobile/                 # Expo app (screens, components, API client)
+│   └── mobile/                 # Expo app (SDK 57, Expo Router, NativeWind)
+│       └── src/
+│           ├── app/            # Screens (file-based routes)
+│           ├── components/     # UI building blocks
+│           └── lib/            # API client, server settings, local video library
 ├── server/
-│   ├── app/                    # FastAPI app: routes, pipeline, models
+│   ├── app/
+│   │   ├── routes/             # REST endpoints
+│   │   ├── pipeline/           # extract → script → tts → align → captions → render
+│   │   ├── scripts/            # CLI tools (init_db, render_sample, …)
+│   │   ├── workflow.py         # Runs the pipeline steps for a job
+│   │   └── main.py             # FastAPI entry point
 │   ├── tests/
-│   └── requirements.txt
+│   ├── requirements.txt        # Core
+│   └── requirements-engines.txt  # Kokoro, Piper, faster-whisper
 ├── assets/
-│   ├── backgrounds/            # Gameplay clips (not committed, see development.md)
-│   └── characters/             # Character images and voice presets
+│   ├── backgrounds/            # Gameplay clips + manifest (clips not committed)
+│   └── characters/             # Original placeholder characters + manifest
 ├── docs/
 │   ├── product.md
 │   ├── architecture.md

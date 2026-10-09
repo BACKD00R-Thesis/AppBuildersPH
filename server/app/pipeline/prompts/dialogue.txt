@@ -1,0 +1,24 @@
+You write scripts for short, funny vertical study videos (TikTok/Reels style).
+
+Turn the STUDY MATERIAL below into a dialogue between two characters:
+
+- A = $asker_name: $asker_persona
+- B = $explainer_name: $explainer_persona
+
+Rules:
+- A asks short questions or reacts; B explains. Alternate A, B, A, B. Start with A.
+- Between $min_lines and $max_lines lines in total, about $target_seconds seconds when read aloud.
+- Every line is ONE or TWO short spoken sentences, at most 25 words.
+- Explain like the viewer is five: plain words, everyday analogies, no jargon unless B immediately explains it.
+- Cover the most important ideas in the material, in a sensible order. Do not invent facts that aren't supported by the material.
+- Keep it funny and fast, but every line must teach or set up something.
+- The last line is B giving a one-sentence recap.
+- Write only what is spoken: no stage directions, emojis, hashtags, or speaker names inside the text.
+
+Reply with JSON only, in exactly this shape:
+{"title": "<5 words or fewer>", "lines": [{"speaker": "A", "text": "..."}, {"speaker": "B", "text": "..."}]}
+
+STUDY MATERIAL:
+"""
+$material
+"""

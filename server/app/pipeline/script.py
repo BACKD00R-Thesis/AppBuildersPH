@@ -25,7 +25,8 @@ DIALOGUE_PROMPT = Template((PROMPTS / "dialogue.txt").read_text(encoding="utf-8"
 
 # Small models have small context windows; keep the source to roughly 2k tokens.
 MAX_SOURCE_CHARS = 8000
-MAX_WORDS_PER_LINE = 40
+MAX_WORDS_PER_LINE = 40  # hard cap; the prompt asks for each character's max_words
+DEFAULT_MAX_WORDS = 25  # for characters without max_words in the manifest
 ATTEMPTS = 2
 SPEECH_WPS = 2.75  # matches the TTS pace in tts.py
 
@@ -90,7 +91,7 @@ class ScriptError(RuntimeError):
 @dataclass(frozen=True)
 class ScriptOptions:
     length_s: int = 60
-    taglish: bool = True
+    taglish: bool = False
 
     @property
     def plan(self) -> LengthPlan:
@@ -145,6 +146,8 @@ def build_prompt(
         asker_persona=asker.persona,
         explainer_name=explainer.name,
         explainer_persona=explainer.persona,
+        asker_max_words=asker.max_words or DEFAULT_MAX_WORDS,
+        explainer_max_words=explainer.max_words or DEFAULT_MAX_WORDS,
         key_ideas="\n".join(f"{i}. {idea}" for i, idea in enumerate(ideas, 1)),
         min_lines=plan.min_lines,
         max_lines=plan.max_lines,

@@ -5,6 +5,7 @@ import { Button } from '../../components/Button'
 import { Icon } from '../../components/Icon'
 import { Notice, NoticeAction } from '../../components/Notice'
 import { Segmented } from '../../components/Segmented'
+import { VoiceStylePicker } from '../../components/VoiceStylePicker'
 import { VideoFrame } from '../../components/VideoFrame'
 import { MobileBottomBar, MobileShell, MobileTitleRow } from '../../layouts/MobileShell'
 import { usePlaying } from '../../lib/audio'
@@ -62,7 +63,11 @@ export function Style() {
           >
             Render video
           </Button>
-          <p className="text-muted text-center text-[12px] whitespace-nowrap">About 2 minutes on your laptop</p>
+          <p className="text-muted text-center text-[12px] whitespace-nowrap">
+            {project.voice_style === 'expressive'
+              ? 'A few minutes longer with Expressive voices'
+              : 'About 2 minutes on your laptop'}
+          </p>
         </MobileBottomBar>
       }
     >
@@ -75,7 +80,7 @@ export function Style() {
           background={background}
           caption={captionFromText(firstLine ?? video.title)}
           captionSize={16}
-          avatars={{ size: 20, fontSize: 7 }}
+          cast
           className="h-[267px] w-[150px] rounded-[16px]"
         />
         <div className="flex min-w-0 flex-1 flex-col gap-[10px]">
@@ -100,7 +105,7 @@ export function Style() {
                 </div>
                 <button
                   type="button"
-                  onClick={() => playVoiceSample(speaker).catch((err) => setError(String(err?.message ?? err)))}
+                  onClick={() => playVoiceSample(speaker, project.voice_style).catch((err) => setError(String(err?.message ?? err)))}
                   aria-pressed={isPlaying}
                   className="text-green flex items-center gap-2 self-start text-[13px] whitespace-nowrap"
                 >
@@ -121,8 +126,13 @@ export function Style() {
       </div>
 
       <div className="flex w-full shrink-0 flex-col gap-[10px]">
+        <h2 className="eyebrow text-green-2">Voice style</h2>
+        <VoiceStylePicker value={project.voice_style} onChange={(voice_style) => updateStyle({ voice_style })} />
+      </div>
+
+      <div className="flex w-full shrink-0 flex-col gap-[10px]">
         <h2 className="eyebrow text-green-2">Background</h2>
-        <div role="radiogroup" aria-label="Background" className="flex gap-[10px]">
+        <div role="radiogroup" aria-label="Background" className="-mx-1 flex gap-[10px] overflow-x-auto px-1 pb-1">
           {backgrounds.map((bg) => {
             const selected = background === bg.id
             const preview = backgroundOf(bg.id).previewUrl

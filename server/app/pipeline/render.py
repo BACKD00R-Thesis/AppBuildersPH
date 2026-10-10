@@ -1,7 +1,10 @@
 """Video composition with the FFmpeg CLI.
 
-Layout (1080x1920): background fills the frame, the speaking character sits in
-the upper-middle area, captions just above the vertical center. See docs/design.md.
+Layout (1080x1920): background fills the frame, captions sit around the vertical
+center, and both characters stand along the bottom edge, the explainer on the left
+and the asker on the right. The speaker is full color and lifted; the listener is
+dimmed, a little smaller and lower. Each line picks an expression for both of them.
+See docs/design.md.
 """
 
 import os
@@ -17,10 +20,21 @@ from app.assets import Background, Character
 from app.config import Settings
 from app.pipeline.align import Word
 from app.pipeline.captions import Segment
+from app.pipeline.moods import line_moods
 
 LINE_GAP_S = 0.25
-CHARACTER_HEIGHT = 520
-CHARACTER_TOP = 290
+
+# Cast layout, from the mascot sheet's "In the video" frame. Fractions of the frame width
+# (x, width) and of the cast area's height (how far the feet drop below the frame).
+CAST_AREA = 0.44  # bottom share of the frame the characters stand in
+CAST_SLOTS = {
+    "explainer": {"x": -0.06, "width": 0.62, "drop": 0.10},
+    "asker": {"x": 0.48, "width": 0.54, "drop": 0.08},
+}
+CHARACTER_ASPECT = 1.25  # the art is 4:5
+LISTENER_SCALE = 0.94
+LISTENER_SINK = 0.06  # share of the character's height the listener sits lower
+LISTENER_OPACITY = 0.55
 
 
 class RenderError(RuntimeError):
@@ -63,6 +77,72 @@ def build_segments(lines: list[TimelineLine], gap: float = LINE_GAP_S) -> tuple[
         t += line.duration + gap
     total = max(t - gap, 0.5) + 0.6  # short tail so the last caption can be read
     return segments, round(total, 3)
+
+
+@dataclass(frozen=True)
+class CastShot:
+    """How one character looks during part of the video."""
+
+    character: Character
+    mood: str
+    speaking: bool
+    start: float
+    end: float
+
+
+def cast_shots(segments: list[Segment], characters: list[Character], total: float) -> list[CastShot]:
+    """Both characters' expression and speaking state, covering the whole video without gaps.
+
+    Each line's look holds from its start until the next line starts, so nobody blinks out
+    during the pauses. Characters without a slot (neither asker nor explainer) aren't shown.
+    """
+    by_name = {c.name: c for c in characters}
+    cast = [c for c in characters if c.role in CAST_SLOTS]
+    roles = [by_name[s.speaker].role if s.speaker in by_name else "" for s in segments]
+    shots = []
+    for i, (segment, (speaker_mood, listener_mood)) in enumerate(
+        zip(segments, line_moods(roles), strict=True)
+    ):
+        start = 0.0 if i == 0 else segment.start
+        end = segments[i + 1].start if i + 1 < len(segments) else total
+        for character in cast:
+            speaking = character.role == roles[i]
+            mood = speaker_mood if speaking else listener_mood
+            shots.append(CastShot(character, mood, speaking, start, end))
+    return shots
+
+
+def _cast_layers(
+    shots: list[CastShot], w: int, h: int
+) -> list[tuple[str, str, int, int, list[tuple[float, float]]]]:
+    """One overlay per (character, expression, speaking): (image, filter, x, y, time ranges)."""
+    groups: dict[tuple[str, str, bool], list[CastShot]] = {}
+    for shot in shots:
+        groups.setdefault((shot.character.id, shot.mood, shot.speaking), []).append(shot)
+    order = list(CAST_SLOTS)  # explainer first, so the asker is drawn on top
+    layers = []
+    for (_, mood, speaking), group in sorted(
+        groups.items(), key=lambda item: order.index(item[1][0].character.role)
+    ):
+        character = group[0].character
+        image = character.image_for(mood)
+        if image is None:
+            continue
+        slot = CAST_SLOTS[character.role]
+        width = slot["width"] * w
+        height = width * CHARACTER_ASPECT
+        bottom = h + slot["drop"] * CAST_AREA * h
+        scale = 1.0 if speaking else LISTENER_SCALE
+        if not speaking:
+            bottom += LISTENER_SINK * height
+        out_w, out_h = round(width * scale / 2) * 2, round(height * scale / 2) * 2
+        x = round(slot["x"] * w + (width - out_w) / 2)
+        y = round(bottom - out_h)
+        look = f"scale={out_w}:{out_h},format=rgba"
+        if not speaking:
+            look += f",colorchannelmixer=aa={LISTENER_OPACITY}"
+        layers.append((image, look, x, y, [(s.start, s.end) for s in group]))
+    return layers
 
 
 def audio_mix_command(settings: Settings, wavs: list[Path], out: Path, gap: float = LINE_GAP_S) -> list[str]:
@@ -127,14 +207,11 @@ def video_command(
     chains = [bg_chain]
     current = "bg"
     input_index = 2
-    for character in characters:
-        ranges = [(s.start, s.end) for s in segments if s.speaker == character.name]
-        if not character.image or not ranges:
-            continue
-        cmd += ["-loop", "1", "-framerate", str(fps), "-i", character.image]
-        chains.append(f"[{input_index}:v]scale=-1:{CHARACTER_HEIGHT},format=rgba[c{input_index}]")
+    for image, look, x, y, ranges in _cast_layers(cast_shots(segments, characters, total), w, h):
+        cmd += ["-loop", "1", "-framerate", str(fps), "-i", image]
+        chains.append(f"[{input_index}:v]{look}[c{input_index}]")
         chains.append(
-            f"[{current}][c{input_index}]overlay=x=(W-w)/2-25:y={CHARACTER_TOP}:"
+            f"[{current}][c{input_index}]overlay=x={x}:y={y}:"
             f"shortest=1:enable='{_enable_expr(ranges)}'[v{input_index}]"
         )
         current = f"v{input_index}"

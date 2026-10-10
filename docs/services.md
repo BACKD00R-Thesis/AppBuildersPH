@@ -35,6 +35,15 @@ Before adding any hosted service, write a decision record in [decisions/](decisi
 | **How we call it** | Python package or CLI, one ONNX voice model per character |
 | **Env vars** | `TTS_ENGINE=piper`, `PIPER_VOICE_A`, `PIPER_VOICE_B`, `MODELS_DIR` |
 
+### Chatterbox: optional "Expressive" voices
+
+| | |
+|---|---|
+| **Purpose** | The Expressive voice style: lines acted by mood (bored, curious, excited, laughing). Users pick Quick or Expressive per video |
+| **How we call it** | Python package (`chatterbox-tts`), installed from `requirements-expressive.txt`. It copies each character's reference clip in `assets/characters/voices/` (made with Kokoro; Bunso's is shifted +4 semitones into a kid's voice) |
+| **Notes** | Needs an NVIDIA GPU (about 3.7 GB of video memory at peak); about 8 GB of downloads with CUDA PyTorch. Runs offline after the first model download. Adds Resemble AI's inaudible watermark to its audio. `/api/health` reports it under `expressive`, outside `ready` |
+| **Env vars** | `EXPRESSIVE_DEVICE` (default `cuda`) |
+
 ### Dummy TTS: development only
 
 | | |

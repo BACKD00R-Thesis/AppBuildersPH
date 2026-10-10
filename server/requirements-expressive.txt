@@ -1,0 +1,9 @@
+# Optional "Expressive" voice style (Chatterbox): voices that act each line by its mood.
+# Needs an NVIDIA graphics card. About 8 GB of downloads (CUDA PyTorch + the model).
+# Install after requirements-engines.txt:  pip install -r requirements-expressive.txt
+# Without it the app works as before; the Expressive option is shown greyed out.
+--extra-index-url https://download.pytorch.org/whl/cu124
+torch==2.6.0+cu124
+torchaudio==2.6.0+cu124
+chatterbox-tts==0.1.7
+setuptools<81  # Chatterbox's watermarker (resemble-perth) still imports pkg_resources

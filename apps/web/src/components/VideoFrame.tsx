@@ -1,8 +1,8 @@
 import type { ReactNode } from 'react'
+import { api } from '../lib/api'
 import { cn } from '../lib/cn'
 import { useStore } from '../lib/store'
 import type { BackgroundId } from '../lib/types'
-import { Avatar } from './Avatar'
 
 interface Props {
   background: BackgroundId
@@ -19,8 +19,8 @@ interface Props {
    * (container query units) instead of staying at a fixed px size. Use it for frames that resize.
    */
   fluidWidth?: number
-  /** Shows the two speaker avatars in the bottom corners. */
-  avatars?: { size: number; fontSize: number }
+  /** Shows Tito and Bunso along the bottom edge, where the engine renders them. */
+  cast?: boolean
   /** Size and corner radius go here. */
   className?: string
   children?: ReactNode
@@ -38,7 +38,7 @@ export function VideoFrame({
   strokeWidth = captionSize / 8,
   captionTop = '40%',
   fluidWidth,
-  avatars,
+  cast,
   className,
   children,
 }: Props) {
@@ -77,10 +77,19 @@ export function VideoFrame({
           {caption[1]}
         </p>
       </div>
-      {avatars && (
+      {cast && (
         <>
-          <Avatar speaker="tito-boy" {...avatars} className="absolute bottom-4 left-[14px]" />
-          <Avatar speaker="bunso" {...avatars} className="absolute right-[14px] bottom-4" />
+          {/* Same slots as CAST_SLOTS in server/app/pipeline/render.py (feet drop below the frame). */}
+          <img
+            src={api.characterImageUrl('tito-boy', 'chill')}
+            alt=""
+            className="pointer-events-none absolute bottom-[-4.4%] left-[-6%] w-[62%] select-none"
+          />
+          <img
+            src={api.characterImageUrl('bunso', 'curious')}
+            alt=""
+            className="pointer-events-none absolute right-[-2%] bottom-[-3.5%] w-[54%] select-none"
+          />
         </>
       )}
       {children}

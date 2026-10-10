@@ -23,7 +23,7 @@ Defined in `apps/web/src/index.css` (Tailwind 4 `@theme`). The default Tailwind 
 | `green-2` | `#2F6B4F` | Hover, chips, eyebrow text |
 | `green-3` | `#8FB59E` | Progress track |
 | `page` | `#F4F7F3` | Background |
-| `mint` | `#E8EFE8` | Rows, Tito Boy's lines |
+| `mint` | `#E8EFE8` | Rows, Tito's lines |
 | `mint-line` | `#D5E3D7` | Borders |
 | `card` | `#FCFDFB` | Cards, Bunso's lines |
 | `ink` | `#17221C` | Text |
@@ -69,14 +69,14 @@ Kept deliberately quiet and built from existing tokens:
 
 - **Frame:** 1080x1920, 9:16, 30 fps.
 - **Background:** the chosen gameplay clip, or its gradient (same colors as the app's previews) with a 5% white floor band from 64% down, matching `VideoFrame`.
-- **Layout:** the speaking character (520 px tall, top at y=290) in the upper third with their name above; captions centered at y=1000, just below the character.
+- **Layout:** from the mascot sheet ("Tito and Bunso Mascots" in Claude Design). Both characters stand along the bottom edge, Tito (explainer) on the left and Bunso (asker) on the right; the speaker is full color, the listener is dimmed to 55%, 94% size and sits lower. Each line sets both expressions: Bunso is bored on the hook, curious while asking or listening, "gets it" on the recall and hyped at Tito's dad joke; Tito explains (every third line he thinks), laughs on his last line and is chill while listening. Captions are centered at y=1000 with the speaker's name just above (y=830). The characters reach into the bottom 320 px platform-UI zone, as in the sheet.
 - **Captions:** uppercase, up to two lines of up to three words (16 characters) each; extra words go on the second line. A line ends after a comma, a block at the end of a sentence. The spoken word is mustard; no size change, so text never shifts. One block on screen at a time.
   - **Bold pop** (default): Archivo Black 84 px, white, 7 px `video` outline, soft shadow.
   - **Clean:** Plus Jakarta Sans 70 px, white on a translucent `video` box.
   - **Outline:** Archivo Black 84 px, hollow white letters; the spoken word fills in mustard.
-- **Speakers:** Tito Boy's name in `mint-line`, Bunso's in `green-3`.
+- **Speakers:** Tito's name in his orange (`#F08A3C`), Bunso's in her pink (`#F27BA5`), the `color` in the character manifest.
 - **Pace:** speech, and therefore the captions, runs at 2.5 to 3 words per second. Lines read faster or slower are time-stretched (pitch preserved) to 2.75; lines under four words are left as they are.
-- **Safe zones:** captions and characters stay out of the bottom 320 px and the right 140 px, where TikTok/Reels/Shorts overlay their buttons.
+- **Safe zones:** captions stay out of the bottom 320 px and the right 140 px, where TikTok/Reels/Shorts overlay their buttons. The characters deliberately reach into that zone (see Layout).
 
 ## Accessibility
 

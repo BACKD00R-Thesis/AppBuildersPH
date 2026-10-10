@@ -30,4 +30,6 @@ def health(
         "auth_ok": token_matches(x_pairing_token, settings),
         "engines": engines,
         "ready": all(e["ok"] for e in engines.values()),
+        # Optional, so it isn't part of "ready": the app greys out the Expressive voice style.
+        "expressive": tts.expressive_status(settings),
     }

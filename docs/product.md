@@ -4,7 +4,7 @@ The single source of truth for what we are building and why. If a feature isn't 
 
 ## Elevator pitch
 
-An open-source, 100% local AI app, for laptop and phone, that turns boring study PDFs into short, ultra-digestible "brainrot" educational videos: Tito Boy and Bunso explain the material in a comedic Taglish dialogue, with word-by-word captions, over gameplay footage.
+An open-source, 100% local AI app, for laptop and phone, that turns boring study PDFs into short, ultra-digestible "brainrot" educational videos: Bunso asks and Tito explains the material in a short, funny dialogue, with word-by-word captions, over gameplay footage.
 
 ## Problem
 
@@ -22,7 +22,7 @@ An open-source, 100% local AI app, for laptop and phone, that turns boring study
 
 ## Solution
 
-A web app served by a local AI engine on the student's laptop, usable from the laptop or from a phone on the same Wi-Fi. It ingests a PDF or pasted notes, picks out the key ideas, turns them into an ELI5 dialogue between Tito Boy (asks) and Bunso (explains), and renders a fully composited 9:16 video with animated captions. Every model runs on the user's own machine. The screens follow the Figma file linked in [design.md](design.md).
+A web app served by a local AI engine on the student's laptop, usable from the laptop or from a phone on the same Wi-Fi. It ingests a PDF or pasted notes, picks out the key ideas, turns them into an ELI5 dialogue between Bunso (asks) and Tito (explains), and renders a fully composited 9:16 video with animated captions. Every model runs on the user's own machine. The screens follow the Figma file linked in [design.md](design.md).
 
 ## Core user flow
 
@@ -31,7 +31,7 @@ A web app served by a local AI engine on the student's laptop, usable from the l
 ```
 
 1. **Upload.** The user picks a lecture deck, paper, or textbook chapter (PDF, .txt or .md) or pastes notes, chooses a length (30, 60 or 90 seconds) and whether to use Taglish. On a laptop, dropping a file on "Make a video" starts right away.
-2. **Script generation.** The local LLM finds the key ideas (3, 5 or 8 by length), then writes a dialogue: Tito Boy asks short, slightly clueless questions; Bunso gives concise ELI5 answers with everyday analogies. The app shows each step while it works.
+2. **Script generation.** The local LLM finds the key ideas (3, 5 or 8 by length), then writes a dialogue: Bunso, a curious 10-year-old, opens with the dumb-but-real question; Tito, a patient tito, answers each idea with one everyday analogy; Bunso closes by saying it back in her own words. The app shows each step while it works.
 3. **Customize and preview.** The user taps a line to edit it, adds lines, plays any line in its voice, hears a sample of each voice, and picks a background and caption style (Bold pop, Clean, Outline) with a live preview.
 4. **Render and export.** The engine voices the lines, aligns word-level timestamps, burns in captions, and renders a 9:16 MP4 while the app shows progress. The user watches it with the key ideas listed beside it, then downloads or shares it.
 
@@ -43,7 +43,7 @@ A web app served by a local AI engine on the student's laptop, usable from the l
 |---|---|
 | Sources | PDF, .txt or .md file, or pasted notes. |
 | Length and language | 30, 60 or 90 seconds; English or Taglish (English explanations, Filipino reactions). |
-| ELI5 dialogue engine | Key ideas first, then a Tito Boy and Bunso script that covers them in order. |
+| ELI5 dialogue engine | Key ideas first, then a Bunso and Tito script that covers them in order. |
 | Script editor | Edit lines inline (saved automatically), add lines, regenerate the whole script. Clearing a line's text removes it. |
 | Voice preview | Play any line, or a sample of each voice. |
 | Style | Four backgrounds (clip or matching gradient), three caption styles, live 9:16 preview. |
@@ -90,7 +90,7 @@ A web app served by a local AI engine on the student's laptop, usable from the l
 
 ## Risks and open questions
 
-- **Character IP.** The pitch references Peter and Stewie Griffin. Those characters, and voice clones of their actors, are copyrighted. We ship original personas, Tito Boy and Bunso, with stock TTS voices; recognizable characters stay out of the codebase.
+- **Character IP.** The pitch references Peter and Stewie Griffin. Those characters, and voice clones of their actors, are copyrighted. We ship original personas, Tito and Bunso, with stock TTS voices; recognizable characters stay out of the codebase.
 - **Gameplay footage licensing.** Minecraft parkour and Subway Surfers clips belong to their publishers. We bundle only footage we recorded ourselves or that is licensed for reuse, and let users add their own clips locally.
 - **Accuracy.** Small 3B models can oversimplify or get facts wrong. The script editor exists so the user can fix this; we should also show a short disclaimer on generated scripts.
 - **Phone vs. laptop.** The MVP runs the AI backend on a laptop on the same network. Fully on-device inference is a post-MVP goal. See [decisions/001-initial-architecture.md](decisions/001-initial-architecture.md).

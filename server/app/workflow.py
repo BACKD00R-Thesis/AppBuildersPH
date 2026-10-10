@@ -16,6 +16,7 @@ from app.assets import Character, get_pair, load_backgrounds, load_characters
 from app.config import Settings
 from app.models import Line, Project, ProjectStatus, Render, RenderStatus, ScriptStep
 from app.pipeline import align, captions, render, script, tts
+from app.pipeline.moods import line_moods
 
 log = logging.getLogger(__name__)
 
@@ -30,6 +31,13 @@ def ordered_lines(session: Session, project_id: str) -> list[Line]:
 
 def characters_by_id(settings: Settings) -> dict[str, Character]:
     return {c.id: c for c in load_characters(settings)}
+
+
+def speaking_moods(lines: list[Line], cast: dict[str, Character]) -> dict[str, str]:
+    """Each line's mood (line id -> mood), from where it sits in the script. Expressive voices
+    act it; the video shows the same expression on the speaker's face."""
+    roles = [cast[line.character_id].role if line.character_id in cast else "" for line in lines]
+    return {line.id: speaker for line, (speaker, _) in zip(lines, line_moods(roles), strict=True)}
 
 
 # --- Script -----------------------------------------------------------------
@@ -93,14 +101,21 @@ def generate_script(session: Session, project_id: str, settings: Settings) -> No
 # --- Voices and captions -----------------------------------------------------
 
 
-def ensure_line_audio(session: Session, line: Line, character: Character, settings: Settings) -> Path:
-    """Synthesize a line's audio unless an up-to-date clip is cached."""
-    key = tts.audio_key(line.text, character, settings)
+def ensure_line_audio(
+    session: Session,
+    line: Line,
+    character: Character,
+    settings: Settings,
+    style: str = "quick",
+    mood: str | None = None,
+) -> Path:
+    """Synthesize a line's audio in the video's voice style unless an up-to-date clip is cached."""
+    key = tts.audio_key(line.text, character, settings, style, mood)
     if line.audio_key == key and line.audio_path and Path(line.audio_path).exists():
         return Path(line.audio_path)
     path = project_dir(settings, line.project_id) / "audio" / f"{line.id}-{key}.wav"
     if not path.exists():
-        tts.synthesize(line.text, character, path, settings)
+        tts.synthesize(line.text, character, path, settings, style, mood)
     if line.audio_path and line.audio_path != str(path):
         Path(line.audio_path).unlink(missing_ok=True)
         Path(line.audio_path).with_suffix(".words.json").unlink(missing_ok=True)
@@ -157,6 +172,9 @@ def run_render(session: Session, render_id: str, settings: Settings, cancel: thr
         if not lines:
             raise render.RenderError("The script is empty. Generate or write some lines first.")
         cast = characters_by_id(settings)
+        project = session.get(Project, job.project_id)
+        style = job.style_options.get("voice_style") or (project.voice_style if project else "quick")
+        moods = speaking_moods(lines, cast)
         backgrounds = {b.id: b for b in load_backgrounds(settings)}
         background = backgrounds.get(job.style_options.get("background_id", "")) or next(
             iter(backgrounds.values())
@@ -168,7 +186,8 @@ def run_render(session: Session, render_id: str, settings: Settings, cancel: thr
             character = cast.get(line.character_id)
             if character is None:
                 raise render.RenderError(f"Unknown character '{line.character_id}'")
-            audios.append((line, character, ensure_line_audio(session, line, character, settings)))
+            audio = ensure_line_audio(session, line, character, settings, style, moods.get(line.id))
+            audios.append((line, character, audio))
             update("voices", (i + 1) / len(lines))
 
         timeline = []

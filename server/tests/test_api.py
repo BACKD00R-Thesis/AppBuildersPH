@@ -79,8 +79,9 @@ def test_pairing_token_required(client, monkeypatch):
 
 def test_assets(client):
     characters = client.get("/api/assets/characters").json()
-    assert [(c["id"], c["role"]) for c in characters] == [("tito-boy", "asker"), ("bunso", "explainer")]
-    assert characters[0]["vibe"] == "Loud and slow"
+    assert [(c["id"], c["role"]) for c in characters] == [("tito-boy", "explainer"), ("bunso", "asker")]
+    assert characters[0]["vibe"] == "Warm and patient"
+    assert "explain" in characters[0]["moods"] and characters[1]["has_image"]
     backgrounds = client.get("/api/assets/backgrounds").json()
     assert [b["id"] for b in backgrounds] == ["parkour", "kart", "blocks", "soap"]
     assert backgrounds[0]["from"].startswith("#") and backgrounds[0]["has_clip"] is False
@@ -130,7 +131,7 @@ def test_upload_and_generate_script(client, sample_pdf, fake_llm):
     assert project["title"] == "Plants Eat Light"  # file-name title replaced by the model's
     assert project["subject"] == "Biology"
     assert project["key_ideas"] == ["Light becomes sugar", "Water is split"]
-    assert [line["character_id"] for line in project["lines"]] == ["tito-boy", "bunso", "tito-boy", "bunso"]
+    assert [line["character_id"] for line in project["lines"]] == ["bunso", "tito-boy", "bunso", "tito-boy"]
     assert project["lines"][0]["voiced"] is False and project["lines"][0]["seconds"] > 0
 
     summary = client.get("/api/projects").json()[0]
@@ -188,8 +189,8 @@ def test_edit_script_keeps_ids_and_preview_audio(client, sample_pdf, fake_llm):
         f"/api/projects/{project['id']}/script",
         json={
             "lines": [
-                {"id": second["id"], "character_id": "bunso", "text": "Moved   to the top."},
-                {"id": first["id"], "character_id": "tito-boy", "text": first["text"]},
+                {"id": second["id"], "character_id": "tito-boy", "text": "Moved   to the top."},
+                {"id": first["id"], "character_id": "bunso", "text": first["text"]},
                 {"character_id": "tito-boy", "text": "A brand new line."},
             ]
         },
@@ -249,6 +250,35 @@ def test_render_requires_known_background(client, sample_pdf, fake_llm):
     project = scripted_project(client, sample_pdf)
     response = client.post(f"/api/projects/{project['id']}/renders", json={"background_id": "subway-surfers"})
     assert response.status_code == 422
+
+
+def test_new_render_cancels_older_active_render(client, sample_pdf, fake_llm, monkeypatch):
+    from app import jobs
+
+    submitted, canceled = [], []
+    monkeypatch.setattr(jobs, "submit_render", submitted.append)  # keep both renders queued
+    monkeypatch.setattr(jobs, "cancel_render", canceled.append)
+    project = scripted_project(client, sample_pdf)
+    first = client.post(f"/api/projects/{project['id']}/renders", json={}).json()
+    second = client.post(f"/api/projects/{project['id']}/renders", json={}).json()
+    assert submitted == [first["id"], second["id"]]
+    assert canceled == [first["id"]]
+
+
+def test_expressive_voice_style_needs_setup(client, sample_pdf, fake_llm, monkeypatch):
+    from app.pipeline import tts
+
+    project = scripted_project(client, sample_pdf)
+    assert project["voice_style"] == "quick"
+    url = f"/api/projects/{project['id']}"
+    monkeypatch.setattr(
+        tts, "expressive_status", lambda s: {"ok": False, "detail": "Needs an NVIDIA graphics card"}
+    )
+    assert client.get("/api/health").json()["expressive"]["ok"] is False
+    refused = client.patch(url, json={"voice_style": "expressive"})
+    assert refused.status_code == 409 and "NVIDIA" in refused.json()["detail"]
+    monkeypatch.setattr(tts, "expressive_status", lambda s: {"ok": True, "detail": "Chatterbox"})
+    assert client.patch(url, json={"voice_style": "expressive"}).json()["voice_style"] == "expressive"
 
 
 def test_delete_project(client, sample_pdf, fake_llm):

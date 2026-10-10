@@ -1,12 +1,12 @@
 # Brainrot Study
 
-> Working title. An open-source, 100% local AI app that turns boring study PDFs into short "brainrot" educational videos: Tito Boy and Bunso explain the material in a comedic Taglish dialogue over gameplay footage.
+> Working title. An open-source, 100% local AI app that turns boring study PDFs into short "brainrot" educational videos: Bunso asks and Tito explains the material in a short, funny dialogue over gameplay footage.
 
 Upload a lecture PDF (or paste your notes), let a local LLM rewrite it as an ELI5 conversation, tweak the script, pick a style, and export a 9:16 MP4 with word-by-word captions. Use it on your laptop, or on your phone over the same Wi-Fi. Nothing leaves your network: no OpenAI, no ElevenLabs, no cloud bills.
 
 ## Features
 
-- **ELI5 dialogue engine**: finds the key ideas, then writes a back-and-forth between Tito Boy (asks) and Bunso (explains). 30, 60 or 90 seconds, in English or Taglish.
+- **ELI5 dialogue engine**: finds the key ideas, then writes a back-and-forth between Bunso (asks) and Tito (explains). 30, 60 or 90 seconds, in English (Taglish is parked for now).
 - **Editable script**: tap a line to rewrite it, add lines, regenerate.
 - **Voice previews**: hear any line, or a sample of each voice, before rendering.
 - **Brainrot captions**: up to two lines at a time, the spoken word highlighted in mustard, in Bold pop, Clean or Outline style.
@@ -27,7 +27,7 @@ Upload a lecture PDF (or paste your notes), let a local LLM rewrite it as an ELI
 | App (laptop + phone) | React 19, Vite, Tailwind CSS 4, React Router, built from the Figma mockups |
 | Engine API | FastAPI (Python); also serves the app |
 | LLM | Ollama (`llama3.2:3b` or `qwen2.5:3b`) |
-| Text-to-speech | Kokoro-TTS or Piper TTS |
+| Text-to-speech | Quick voices: Kokoro-TTS or Piper TTS. Optional Expressive voices: Chatterbox (NVIDIA GPU) |
 | Word timestamps | faster-whisper |
 | Video composition | FFmpeg CLI |
 
@@ -90,7 +90,7 @@ project-root/
 │   └── requirements-engines.txt  # Kokoro, Piper, faster-whisper
 ├── assets/
 │   ├── backgrounds/            # Gameplay clips + manifest with gradient colors (clips not committed)
-│   └── characters/             # Tito Boy and Bunso placeholder art + manifest
+│   └── characters/             # Tito and Bunso mascots (design files, one PNG per expression) + manifest
 ├── docs/
 │   ├── product.md
 │   ├── architecture.md

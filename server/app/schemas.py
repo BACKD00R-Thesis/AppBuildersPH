@@ -13,6 +13,7 @@ from app.models import (
     Render,
     RenderStatus,
     ScriptStep,
+    VoiceStyle,
 )
 
 API_PREFIX = "/api"
@@ -131,6 +132,7 @@ class ProjectOut(BaseModel):
     key_ideas: list[str]
     background_id: str | None
     caption_style: CaptionStyle
+    voice_style: VoiceStyle
     lines: list[LineOut]
     renders: list[RenderOut]  # newest first
     video: RenderOut | None  # newest finished render
@@ -158,6 +160,7 @@ class ProjectOut(BaseModel):
             key_ideas=list(project.key_ideas or []),
             background_id=project.background_id,
             caption_style=project.caption_style,
+            voice_style=project.voice_style,
             lines=[LineOut.of(line) for line in lines],
             renders=[RenderOut.of(r) for r in renders],
             video=RenderOut.of(done) if done else None,
@@ -179,6 +182,7 @@ class ProjectUpdate(BaseModel):
     title: str | None = Field(default=None, min_length=1, max_length=120)
     background_id: str | None = None
     caption_style: CaptionStyle | None = None
+    voice_style: VoiceStyle | None = None
     taglish: bool | None = None
     length_s: int | None = None
 

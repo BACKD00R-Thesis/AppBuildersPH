@@ -29,6 +29,11 @@
   --color-on-green: #b9d2c2; /* secondary text on a green header */
   --color-video: #151a14; /* video base, caption outline */
 
+  /* Mascot sheet ("Tito and Bunso Mascots"): each character's color, behind their art */
+  --color-tito: #f08a3c;
+  --color-bunso: #f27ba5;
+  --color-mascot-ink: #1f1b16; /* the mascots' outline */
+
   --font-serif: 'Playfair Display', Georgia, serif; /* headings and big numbers only */
   --font-sans: 'Plus Jakarta Sans', system-ui, sans-serif; /* everything you read or click */
   --font-caption: 'Archivo Black', Impact, sans-serif; /* video captions only */

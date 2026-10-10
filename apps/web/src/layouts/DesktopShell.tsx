@@ -75,7 +75,7 @@ export function DesktopShell({ active, children }: { active: NavKey; children: R
   const [error, setError] = useState<string | null>(null)
 
   // There is no laptop "upload" or "writing script" screen in the design: a picked file
-  // starts the script right away (60s, Taglish on) and opens the Workspace.
+  // starts the script right away (60s, Taglish per TAGLISH_ENABLED) and opens the Workspace.
   const startFromFile = async (file: File) => {
     setStarting(true)
     setError(null)

@@ -75,7 +75,8 @@ Routes, Figma frame mapping and design rules are in [apps/web/HANDOFF.md](../app
 | `routes/` | REST endpoints (see below); `deps.py` checks the pairing token |
 | `pipeline/extract.py` | PDF to clean text with PyMuPDF (page selection, limits); pasted notes and .txt/.md |
 | `pipeline/script.py` | Two Ollama calls with JSON schemas: key ideas, title and subject (`prompts/ideas.txt`), then the dialogue (`prompts/dialogue.txt`) for the chosen length and language; cleaning, name fixes, de-duplication, retries |
-| `pipeline/tts.py` | Kokoro, Piper, or a `dummy` engine; one cached WAV per line, paced to 2.5-3 words per second |
+| `pipeline/tts.py` | Two voice styles per video. Quick: Kokoro, Piper, or a `dummy` engine, paced to 2.5-3 words per second. Expressive (optional): Chatterbox copies each character's reference clip and acts the line's mood. One cached WAV per line, style and mood |
+| `pipeline/moods.py` | Each line's mood (hook, explain, recall), shared by the mascots' faces and the Expressive voices |
 | `pipeline/align.py` | faster-whisper word timestamps mapped onto the script's own words; estimated timing as a fallback |
 | `pipeline/captions.py` | ASS subtitles: two-line blocks, mustard active word, three styles, speaker labels |
 | `pipeline/render.py` | FFmpeg commands: audio mix (gaps, loudness), clip or gradient background, character overlays, captions; progress and cancel |
@@ -83,7 +84,7 @@ Routes, Figma frame mapping and design rules are in [apps/web/HANDOFF.md](../app
 | `jobs.py` | One background worker thread; cancellation; marks interrupted work as failed on restart |
 | `assets.py` | Characters and backgrounds from `assets/*/manifest.json` |
 | `db.py`, `models.py`, `schemas.py` | SQLite via SQLModel (adds new columns to older databases); API shapes |
-| `scripts/` | CLI tools: `init_db`, `download_models`, `script_sample`, `render_sample`, `make_placeholder_characters` |
+| `scripts/` | CLI tools: `init_db`, `download_models`, `script_sample`, `render_sample`, `render_mascots` |
 
 ### API surface
 

@@ -13,12 +13,13 @@ Rules:
 - Nobody says their own name. A may call B "$explainer_name"; B may call A "$asker_name".
 - Each question moves to the next key idea. Don't repeat a question or an explanation.
 - Between $min_lines and $max_lines lines in total, about $target_seconds seconds (about $target_words words) when read aloud.
-- Every line is ONE or TWO short spoken sentences, at most 25 words.
-- Cover every key idea, in order. Explain like the viewer is five: plain words and everyday analogies, no jargon unless B immediately explains it.
+- Every line is ONE or TWO short spoken sentences. $asker_name's lines are at most $asker_max_words words; $explainer_name's lines are at most $explainer_max_words words.
+- Cover every key idea, in order. Explain like the viewer is five: plain words, no jargon unless B immediately explains it.
+- B explains each key idea with ONE everyday analogy. Don't stack metaphors.
 - Do not invent facts that aren't supported by the material.
 - $language
 - Keep it funny and fast, but every line must teach or set up something.
-- The last line is B giving a one-sentence recap.
+- The last line is A saying the main idea back in their own words, in one sentence.
 - Write only what is spoken: no stage directions, emojis, hashtags, or speaker names inside the text.
 
 Reply with JSON only, in exactly this shape:

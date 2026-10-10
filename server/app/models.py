@@ -45,6 +45,11 @@ class CaptionStyle(StrEnum):
     OUTLINE = "outline"
 
 
+class VoiceStyle(StrEnum):
+    QUICK = "quick"  # Kokoro/Piper: clear, steady, fast on any laptop
+    EXPRESSIVE = "expressive"  # Chatterbox: acted by mood, slower, optional (NVIDIA GPU)
+
+
 VIDEO_LENGTHS = (30, 60, 90)
 
 
@@ -63,7 +68,7 @@ class Project(SQLModel, table=True):
     extracted_text: str
     # Options chosen before writing the script
     length_s: int = 60
-    taglish: bool = True
+    taglish: bool = False
     # Script generation progress and results
     script_step: ScriptStep | None = None
     script_started_at: datetime | None = None
@@ -71,6 +76,7 @@ class Project(SQLModel, table=True):
     # Style last chosen for this video (the next render uses it)
     background_id: str | None = None
     caption_style: CaptionStyle = CaptionStyle.BOLD_POP
+    voice_style: VoiceStyle = VoiceStyle.QUICK
     created_at: datetime = Field(default_factory=_now)
     updated_at: datetime = Field(default_factory=_now)
 

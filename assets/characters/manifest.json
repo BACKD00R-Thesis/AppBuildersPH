@@ -1,24 +1,43 @@
 [
   {
     "id": "tito-boy",
-    "name": "Tito Boy",
-    "role": "asker",
-    "vibe": "Loud and slow",
-    "persona": "A loud, friendly Filipino tito who takes his time, asks short and slightly clueless questions, and reacts with big surprise.",
-    "color": "#D5E3D7",
-    "sample": "Bunso, ano ba 'to? Explain it to your tito, slowly!",
-    "voices": { "kokoro": "am_michael", "piper": "piper/en_US-ryan-medium.onnx" },
-    "image": "tito-boy.png"
+    "name": "Tito",
+    "role": "explainer",
+    "vibe": "Warm and patient",
+    "persona": "A warm, patient Filipino tito in his mid-40s, a little corny on purpose. He explains each idea with ONE everyday analogy from home (the kitchen, a jeepney ride, the corner store, basketball), never talks down, and rewards a right answer with a dad joke. He calls Bunso \"kiddo\".",
+    "color": "#F08A3C",
+    "max_words": 14,
+    "sample": "It's simple, kiddo. Picture it like a jeepney.",
+    "sample_taglish": "Ganito lang 'yan, anak. Parang jeepney.",
+    "voices": { "kokoro": "am_michael", "piper": "piper/en_US-ryan-medium.onnx", "chatterbox": "voices/tito.wav" },
+    "design": "design/tito.dc.html",
+    "image": "tito-chill.png",
+    "moods": {
+      "chill": "tito-chill.png",
+      "explain": "tito-explain.png",
+      "think": "tito-think.png",
+      "laugh": "tito-laugh.png"
+    }
   },
   {
     "id": "bunso",
     "name": "Bunso",
-    "role": "explainer",
-    "vibe": "Fast and smug",
-    "persona": "The smug, quick-talking youngest sibling who explains everything in one or two short sentences with everyday Filipino analogies, and can't resist a light roast.",
-    "color": "#8FB59E",
-    "sample": "Easy lang, Tito. I'll explain it in ten seconds.",
-    "voices": { "kokoro": "af_heart", "piper": "piper/en_US-amy-medium.onnx" },
-    "image": "bunso.png"
+    "role": "asker",
+    "vibe": "Quick and curious",
+    "persona": "A curious, impatient, very online 10-year-old girl. She asks the dumb-but-real question in short bursts (\"Wait, why?\"), cuts in when Tito rambles, and once it clicks she says the idea back in her own words.",
+    "color": "#F27BA5",
+    "max_words": 8,
+    "sample": "Wait, why? Tito, skip the ad.",
+    "sample_taglish": "Tito, ano ba talaga 'yan?",
+    "pitch_shift": 4,
+    "voices": { "kokoro": "af_bella", "piper": "piper/en_US-amy-medium.onnx", "chatterbox": "voices/bunso.wav" },
+    "design": "design/bunso.dc.html",
+    "image": "bunso-curious.png",
+    "moods": {
+      "bored": "bunso-bored.png",
+      "curious": "bunso-curious.png",
+      "gets": "bunso-gets.png",
+      "hyped": "bunso-hyped.png"
+    }
   }
 ]

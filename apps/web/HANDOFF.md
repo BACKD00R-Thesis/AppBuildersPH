@@ -54,7 +54,7 @@ src/
     videos.ts          engine project -> video card; step routing; step lists for the progress screens
     audio.ts           one shared player for line previews and voice samples
     options.ts         caption styles, lengths, key-idea counts per length
-    speakers.ts        Tito Boy and Bunso display names, initials and vibes
+    speakers.ts        Tito and Bunso display names, vibes and colors (avatars use the engine's mascot art)
     types.ts, format.ts, cn.ts, useIsDesktop.ts
   components/          Button, Avatar, VideoFrame, VideoPlayer, ScriptLineCard, ScriptList (+ editing hook),
                        ScriptProgress, Segmented, Toggle, Steps, ProgressBar, KeyIdeas, Notice, Icon
@@ -73,7 +73,8 @@ design-reference/mobile/   Figma renders of the 7 mobile screens
 | Writing script progress | polls `GET /api/projects/:id` (`script_step`: ideas, jokes, check) |
 | Edit a line, "Done" / Enter | `PUT /api/projects/:id/script` (lines left empty are dropped) |
 | Play a line | saves if needed, `POST /api/lines/:id/preview`, plays the returned WAV |
-| Hear sample | `GET /api/assets/characters/:id/sample` |
+| Hear sample | `GET /api/assets/characters/:id/sample?style=quick\|expressive` |
+| Voice style (Quick / Expressive) | `PATCH /api/projects/:id` with `voice_style`; Expressive is greyed out unless `/api/health` `expressive.ok` |
 | Background, captions, Taglish | `PATCH /api/projects/:id` (saved per video) |
 | Regenerate | `POST /api/projects/:id/script` (asks first on laptop, since it replaces edits) |
 | Render video | `POST /api/projects/:id/renders`, then polls for `step` and `progress` |
@@ -114,7 +115,7 @@ design-reference/mobile/   Figma renders of the 7 mobile screens
 - Voice loading: the play button pulses and the line reads "Getting the voice…".
 - Engine screen, and the mobile Library tab: nav items are shown but are not links.
 - Laptop upload and "writing script" screens: on laptop, "New video" and the "Make a video" pill open the file
-  picker, start the script with 60s and Taglish on, and show progress inside the Workspace's script column.
+  picker, start the script with 60s (English while `TAGLISH_ENABLED` is off), and show progress inside the Workspace's script column.
 - Toggle off state: `toggle-off.svg` is the only icon not exported from Figma.
 - "Clean" and "Outline" caption styles: selectable and rendered by the engine, but the in-app preview only draws "Bold pop".
 - Key-idea counts for 30s and 90s (3 and 8): only 60s (5) is in the design; the engine uses the same numbers.

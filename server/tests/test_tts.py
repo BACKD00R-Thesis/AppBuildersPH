@@ -39,3 +39,41 @@ def test_pace_clip_keeps_clip_if_ffmpeg_missing(tmp_path, monkeypatch):
     tts._dummy(TEXT, DEX, path, words_per_second=5)
     tts.pace_clip(path, 8, get_settings())
     assert tts.speech_rate(path, 8) == pytest.approx(5, rel=0.01)
+
+
+KID = Character(
+    id="kid", name="Kid", role="asker", persona="", color="#F27BA5",
+    voices={"kokoro": "af_bella", "chatterbox": "voices/kid.wav"},
+)  # fmt: skip
+
+
+def test_audio_key_depends_on_voice_style_and_mood():
+    settings = get_settings()
+    quick = tts.audio_key(TEXT, KID, settings)
+    assert quick == tts.audio_key(TEXT, KID, settings, "quick", "gets")  # quick voices aren't acted
+    excited = tts.audio_key(TEXT, KID, settings, "expressive", "gets")
+    bored = tts.audio_key(TEXT, KID, settings, "expressive", "bored")
+    assert len({quick, excited, bored}) == 3
+
+
+def test_kid_voice_shift_gets_its_own_audio():
+    settings = get_settings().model_copy(update={"tts_engine": "kokoro"})  # dummy blips aren't shifted
+    shifted = Character(**{**KID.__dict__, "pitch_shift": 4})
+    assert tts.audio_key(TEXT, KID, settings) != tts.audio_key(TEXT, shifted, settings)
+
+
+def test_expressive_voice_comes_from_the_characters_folder():
+    settings = get_settings()
+    assert tts.voice_for(KID, settings, "expressive") == str(
+        settings.assets_dir / "characters" / "voices/kid.wav"
+    )
+    with pytest.raises(tts.TTSError, match="No expressive voice"):
+        tts.voice_for(DEX, settings, "expressive")
+
+
+@needs_ffmpeg
+def test_acted_lines_only_move_to_the_nearest_edge(tmp_path):
+    path = tmp_path / "slow.wav"
+    tts._dummy(TEXT, DEX, path, words_per_second=1.8)  # a deliberately slow, bored line
+    tts.pace_clip(path, 8, get_settings(), tts.EXPRESSIVE_WPS, nearest_edge=True)
+    assert tts.speech_rate(path, 8) == pytest.approx(tts.EXPRESSIVE_WPS[0], rel=0.03)

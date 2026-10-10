@@ -11,7 +11,8 @@ from app.assets import load_backgrounds, load_characters
 from app.config import Settings, get_settings
 from app.db import get_session
 from app.deps import require_token
-from app.models import VIDEO_LENGTHS, Line, Project, ProjectStatus, Render
+from app.models import VIDEO_LENGTHS, Line, Project, ProjectStatus, Render, VoiceStyle
+from app.pipeline import tts
 from app.pipeline.extract import ExtractError, decode_text_file, extract_pdf, extract_text
 from app.schemas import ProjectOut, ProjectSummary, ProjectUpdate, ScriptIn
 
@@ -57,7 +58,7 @@ async def create_project(
     title: str | None = Form(default=None),
     pages: str | None = Form(default=None, description='PDF page selection, e.g. "1-5, 8"'),
     length_s: int = Form(default=60),
-    taglish: bool = Form(default=True),
+    taglish: bool = Form(default=False),
     session: Session = Depends(get_session),
     settings: Settings = Depends(get_settings),
 ) -> ProjectOut:
@@ -129,7 +130,7 @@ def update_project(
     session: Session = Depends(get_session),
     settings: Settings = Depends(get_settings),
 ) -> ProjectOut:
-    """Rename, or save style and options (background, captions, Taglish, length)."""
+    """Rename, or save style and options (background, captions, voice style, Taglish, length)."""
     project = get_project(project_id, session)
     if problem := body.check():
         raise unprocessable(problem)
@@ -137,6 +138,14 @@ def update_project(
         b.id for b in load_backgrounds(settings)
     }:
         raise unprocessable(f"Unknown background '{body.background_id}'")
+    if (
+        body.voice_style == VoiceStyle.EXPRESSIVE
+        and not (expressive := tts.expressive_status(settings))["ok"]
+    ):
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            f"Expressive voices aren't set up on this laptop: {expressive['detail']}",
+        )
     for name, value in body.model_dump(exclude_none=True).items():
         setattr(project, name, value.strip() if isinstance(value, str) and name == "title" else value)
     project.updated_at = datetime.now(UTC)

@@ -27,7 +27,7 @@ export function useSecondsLeft(project: Project | null): string {
 }
 
 export function scriptHeadline(project: Project): string {
-  const reader = speakerOf('bunso').name
+  const reader = speakerOf('tito-boy').name
   return project.source_kind === 'pdf' ? `${reader} is reading your PDF` : `${reader} is reading your notes`
 }
 

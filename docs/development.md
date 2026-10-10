@@ -42,6 +42,7 @@ python -m venv .venv
 source .venv/bin/activate          # Windows PowerShell: .venv\Scripts\Activate.ps1
 pip install -r requirements.txt            # API + pipeline (light)
 pip install -r requirements-engines.txt    # Kokoro, Piper, faster-whisper (heavy, downloads PyTorch)
+pip install -r requirements-expressive.txt # optional: Expressive voices (NVIDIA GPU, ~8 GB with CUDA PyTorch)
 python -m app.scripts.init_db
 uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
@@ -108,7 +109,8 @@ Burned-in captions use **Archivo Black** (Bold pop, Outline) and **Plus Jakarta 
 | `WEB_DIST_DIR` | `./apps/web/dist` | Built web app served at `/` |
 | `OLLAMA_HOST`, `OLLAMA_MODEL`, `OLLAMA_TIMEOUT_S` | `http://127.0.0.1:11434`, `llama3.2:3b`, `180` | LLM endpoint and model |
 | `TTS_ENGINE` | `kokoro` | `kokoro`, `piper`, or `dummy` |
-| `KOKORO_VOICE_A/B`, `PIPER_VOICE_A/B` | from the character manifest | Override the asker (A, Tito Boy) and explainer (B, Bunso) voices |
+| `KOKORO_VOICE_A/B`, `PIPER_VOICE_A/B` | from the character manifest | Override the asker (A, Bunso) and explainer (B, Tito) voices |
+| `EXPRESSIVE_DEVICE` | `cuda` | Where the optional Expressive voices (Chatterbox) run; `cpu` works but is very slow. Without `requirements-expressive.txt` or a CUDA GPU the app greys the option out |
 | `WHISPER_MODEL`, `WHISPER_DEVICE`, `WHISPER_COMPUTE_TYPE` | `small`, `cpu`, `int8` | Alignment model and hardware |
 | `FFMPEG_PATH` | `ffmpeg` | FFmpeg binary |
 | `RENDER_WIDTH`, `RENDER_HEIGHT`, `RENDER_FPS` | `1080`, `1920`, `30` | Output video format |
@@ -135,13 +137,14 @@ Never commit `.env`. Add new variables to `.env.example`, `server/app/config.py`
 | Web app type check + build | `npm run build` (`apps/web/`) |
 | Print a script for a PDF | `python -m app.scripts.script_sample file.pdf --pages 1-5` (`server/`) |
 | Render a video from the CLI | `python -m app.scripts.render_sample file.pdf` or `--script lines.txt` to skip the LLM (`server/`) |
-| Redraw placeholder characters | `python -m app.scripts.make_placeholder_characters` (`server/`) |
+| Re-render the mascot PNGs after a design change | `python -m app.scripts.render_mascots` (`server/`, needs Edge or Chrome) |
 
 ## Common workflows
 
 ### Change the prompts
 
 1. Edit [ideas.txt](../server/app/pipeline/prompts/ideas.txt) (key ideas, title, subject) or [dialogue.txt](../server/app/pipeline/prompts/dialogue.txt) (the script). Placeholders use `$name` syntax. Taglish wording lives in `LANGUAGE` in [script.py](../server/app/pipeline/script.py).
+   Taglish mode is parked: new videos default to English and the toggle is hidden while `TAGLISH_ENABLED` in [options.ts](../apps/web/src/lib/options.ts) is `false`, because the TTS engines have no Tagalog voice. Set it to `true` to bring the toggle back.
 2. Run `python -m app.scripts.script_sample path/to/file.pdf` to print the generated script without rendering.
 3. Check it against two or three different PDFs, in English and Taglish, before opening a PR.
 

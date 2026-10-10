@@ -74,7 +74,7 @@ export function Rendering() {
             background={background}
             caption={captionFromText(firstLine ?? video.title)}
             captionSize={26}
-            avatars={{ size: 39, fontSize: 14 }}
+            cast
             className="h-[533px] w-[300px] rounded-[18px]"
           >
             {/* "Not rendered yet" veil: covers the part of the frame the render hasn't reached. */}

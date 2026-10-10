@@ -8,6 +8,8 @@ data/
 models/
 assets/backgrounds/*.mp4
 *.wav
+# ...except the Expressive voices' reference clips (synthetic, made with Kokoro), which the app needs
+!assets/characters/voices/*.wav
 *.mp4
 
 # Python

@@ -6,6 +6,9 @@ export type BackgroundId = string
 
 export type CaptionStyle = 'bold-pop' | 'clean' | 'outline'
 
+/** quick: Kokoro/Piper, fast on any laptop. expressive: Chatterbox, acted, optional (NVIDIA GPU). */
+export type VoiceStyle = 'quick' | 'expressive'
+
 export type VideoLength = 30 | 60 | 90
 
 export type StepStatus = 'done' | 'current' | 'pending'

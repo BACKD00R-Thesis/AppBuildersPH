@@ -5,14 +5,15 @@ from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import FileResponse
-from sqlmodel import Session
+from sqlmodel import Session, select
 
 from app import jobs, workflow
 from app.assets import load_backgrounds
 from app.config import Settings, get_settings
 from app.db import get_session
 from app.deps import require_token
-from app.models import ProjectStatus, Render, RenderStatus
+from app.models import ProjectStatus, Render, RenderStatus, VoiceStyle
+from app.pipeline import tts
 from app.routes.projects import get_project
 from app.schemas import RenderIn, RenderOut
 
@@ -51,12 +52,33 @@ def start_render(
     if background_id and background_id not in {b.id for b in load_backgrounds(settings)}:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, f"Unknown background '{background_id}'")
     caption_style = body.caption_style or project.caption_style
+    if (
+        project.voice_style == VoiceStyle.EXPRESSIVE
+        and not (expressive := tts.expressive_status(settings))["ok"]
+    ):
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            f"Expressive voices aren't set up on this laptop: {expressive['detail']}",
+        )
+    # The app follows the newest render, so an older one still queued or running would only
+    # hold it at 0%. The newest choice of style wins.
+    for active in session.exec(
+        select(Render).where(
+            Render.project_id == project_id,
+            Render.status.in_([RenderStatus.QUEUED, RenderStatus.RUNNING]),
+        )
+    ):
+        jobs.cancel_render(active.id)
     project.background_id = background_id
     project.caption_style = caption_style
     session.add(project)
     render = Render(
         project_id=project_id,
-        style_options={"background_id": background_id, "caption_style": str(caption_style)},
+        style_options={
+            "background_id": background_id,
+            "caption_style": str(caption_style),
+            "voice_style": str(project.voice_style),
+        },
     )
     session.add(render)
     session.commit()

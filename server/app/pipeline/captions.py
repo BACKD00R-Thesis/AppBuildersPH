@@ -3,7 +3,7 @@
 Captions show a block of up to two lines (up to three words each); extra words go
 on the second line. The word being spoken is highlighted in mustard, the design's
 one highlight. A block stays up until the next block starts, so two blocks are
-never on screen at once. The current speaker's name is shown above the character.
+never on screen at once. The current speaker's name sits just above the caption, in their color.
 
 Three styles match the app's "Captions" picker: bold-pop (outlined Archivo Black),
 clean (plain sans on a soft dark box) and outline (hollow letters).
@@ -27,8 +27,8 @@ MAX_LINES = 2
 HOLD_LAST_WORD_S = 0.4
 
 # Layout for a 1080x1920 frame. Platform UI covers the bottom 320px and the right 140px.
-CAPTION_Y = 1000  # center of the caption block, just below the character
-SPEAKER_Y = 230
+CAPTION_Y = 1000  # center of the caption block, above the characters along the bottom
+SPEAKER_Y = 830  # the name, just above the caption block (as in the mascot sheet)
 
 SENTENCE_END = re.compile(r"[.!?…]$")
 CLAUSE_END = re.compile(r"[,;:]$")

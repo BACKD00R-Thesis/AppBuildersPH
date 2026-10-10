@@ -1,10 +1,16 @@
-"""Text-to-speech adapter: Kokoro (default), Piper (lighter), or dummy (no models needed).
+"""Text-to-speech adapter, with two voice styles a video can pick:
 
-Every engine writes a mono 16-bit WAV. Models load once and are reused. Speech is
-kept at 2.5-3 words per second so the captions it drives stay readable: clips
-outside that range are time-stretched (pitch preserved) with FFmpeg.
+- quick: Kokoro (default), Piper (lighter), or dummy (no models needed), from TTS_ENGINE.
+  Clear, steady voices that are fast on any laptop.
+- expressive: Chatterbox (optional, requirements-expressive.txt). It copies each character's
+  reference clip and acts each line by its mood (moods.py). Slower; wants an NVIDIA GPU.
+
+Every engine writes a mono 16-bit WAV. Models load once and are reused. Speech is kept
+in a readable words-per-second window so the captions it drives stay readable: clips
+outside it are time-stretched (pitch preserved) with FFmpeg.
 """
 
+import functools
 import hashlib
 import importlib.util
 import logging
@@ -20,14 +26,24 @@ from app.config import Settings
 
 log = logging.getLogger(__name__)
 
-ENGINES = ("kokoro", "piper", "dummy")
+ENGINES = ("kokoro", "piper", "dummy")  # quick-style engines (TTS_ENGINE)
+VOICE_STYLES = ("quick", "expressive")
 DEFAULT_KOKORO_VOICE = "am_michael"
 
 # Readable caption pace (words per second). Changing these re-synthesizes cached clips.
 MIN_WPS, MAX_WPS, TARGET_WPS = 2.5, 3.0, 2.75
+# Acted lines may run a little slower or faster than read ones and stay readable.
+EXPRESSIVE_WPS = (2.2, 3.3)
 # Very short lines ("Wait, what?") are mostly silence padding; their rate isn't meaningful.
 MIN_WORDS_TO_PACE = 4
-PACE_VERSION = f"pace-{MIN_WPS}-{MAX_WPS}"
+
+# Expressive: how strongly each mood is acted (Chatterbox "exaggeration", 0.25-2). The values
+# sit close together so the voice moves gently from line to line instead of jumping.
+EXPRESSIVE_INTENSITY = {
+    "bored": 0.40, "curious": 0.50, "gets": 0.65, "hyped": 0.65,
+    "chill": 0.45, "explain": 0.50, "think": 0.45, "laugh": 0.60,
+}  # fmt: skip
+EXPRESSIVE_CFG = 0.5  # how closely it follows the reference's pacing
 
 
 class TTSError(RuntimeError):
@@ -37,23 +53,50 @@ class TTSError(RuntimeError):
 _lock = threading.Lock()
 _kokoro_pipelines: dict[str, object] = {}
 _piper_voices: dict[str, object] = {}
+_chatterbox: dict[str, object] = {}  # "model", plus prepared voices keyed by reference path
 
 
-def voice_for(character: Character, settings: Settings) -> str:
-    engine = settings.tts_engine
+def engine_for(style: str, settings: Settings) -> str:
+    return "chatterbox" if style == "expressive" else settings.tts_engine
+
+
+def voice_for(character: Character, settings: Settings, style: str = "quick") -> str:
+    engine = engine_for(style, settings)
     if engine == "dummy":
         return character.role
     voice = character.voices.get(engine)
     if engine == "kokoro":
         return voice or DEFAULT_KOKORO_VOICE
+    if engine == "chatterbox":
+        if not voice:
+            raise TTSError(
+                f"No expressive voice set for {character.name} (voices.chatterbox in the manifest)"
+            )
+        return str(settings.assets_dir / "characters" / voice)
     if not voice:
         raise TTSError(f"No Piper voice set for {character.name} (see PIPER_VOICE_A/B)")
     return voice
 
 
-def audio_key(text: str, character: Character, settings: Settings) -> str:
-    """Identifies a synthesized clip, so unchanged lines reuse cached audio."""
-    raw = f"{settings.tts_engine}|{voice_for(character, settings)}|{PACE_VERSION}|{text}"
+def _pace_window(style: str) -> tuple[float, float]:
+    return EXPRESSIVE_WPS if style == "expressive" else (MIN_WPS, MAX_WPS)
+
+
+def audio_key(
+    text: str, character: Character, settings: Settings, style: str = "quick", mood: str | None = None
+) -> str:
+    """Identifies a synthesized clip, so unchanged lines reuse cached audio.
+
+    Expressive clips also depend on the line's mood: a line moved to the end (Bunso's recall)
+    is acted differently, so it gets new audio.
+    """
+    engine = engine_for(style, settings)
+    acted = f"|{mood}@{EXPRESSIVE_INTENSITY.get(mood or '', 0.5)}" if engine == "chatterbox" else ""
+    shift = (
+        f"|shift{character.pitch_shift}" if character.pitch_shift and engine in ("kokoro", "piper") else ""
+    )
+    pace = "pace-{}-{}{}".format(*_pace_window(style), "-edge" if style == "expressive" else "")
+    raw = f"{engine}|{voice_for(character, settings, style)}{shift}{acted}|{pace}|{text}"
     return hashlib.sha256(raw.encode("utf-8")).hexdigest()[:16]
 
 
@@ -62,20 +105,35 @@ def wav_duration(path: Path) -> float:
         return wav.getnframes() / float(wav.getframerate())
 
 
-def synthesize(text: str, character: Character, out_path: Path, settings: Settings) -> float:
-    """Synthesize `text` to `out_path` and return the duration in seconds."""
-    if settings.tts_engine not in ENGINES:
+def synthesize(
+    text: str,
+    character: Character,
+    out_path: Path,
+    settings: Settings,
+    style: str = "quick",
+    mood: str | None = None,
+) -> float:
+    """Synthesize `text` to `out_path` in the given voice style and return the duration in seconds."""
+    engine = engine_for(style, settings)
+    if style not in VOICE_STYLES:
+        raise TTSError(f"Unknown voice style '{style}' (use one of {VOICE_STYLES})")
+    if engine not in (*ENGINES, "chatterbox"):
         raise TTSError(f"Unknown TTS_ENGINE '{settings.tts_engine}' (use one of {ENGINES})")
     out_path.parent.mkdir(parents=True, exist_ok=True)
-    voice = voice_for(character, settings)
+    voice = voice_for(character, settings, style)
     with _lock:
-        if settings.tts_engine == "kokoro":
+        if engine == "kokoro":
             _kokoro(text, voice, out_path)
-        elif settings.tts_engine == "piper":
+        elif engine == "piper":
             _piper(text, voice, out_path, settings)
+        elif engine == "chatterbox":
+            seed = int(audio_key(text, character, settings, style, mood), 16) % 2**31
+            _chatterbox_speak(text, Path(voice), mood, seed, out_path, settings)
         else:
             _dummy(text, character, out_path)
-    pace_clip(out_path, len(text.split()), settings)
+    if character.pitch_shift and engine in ("kokoro", "piper"):
+        shift_pitch(out_path, character.pitch_shift, settings)
+    pace_clip(out_path, len(text.split()), settings, _pace_window(style), nearest_edge=style == "expressive")
     return wav_duration(out_path)
 
 
@@ -83,30 +141,53 @@ def speech_rate(path: Path, word_count: int) -> float:
     return word_count / max(wav_duration(path), 0.01)
 
 
-def pace_clip(path: Path, word_count: int, settings: Settings) -> None:
-    """Time-stretch a clip into MIN_WPS..MAX_WPS words per second, keeping its pitch."""
-    if word_count < MIN_WORDS_TO_PACE:
-        return
-    rate = speech_rate(path, word_count)
-    if MIN_WPS <= rate <= MAX_WPS:
-        return
-    # atempo > 1 speeds up; playing at TARGET_WPS/rate turns `rate` into TARGET_WPS.
-    tempo = min(max(TARGET_WPS / rate, 0.5), 2.0)
-    tmp = path.with_suffix(".paced.wav")
+def _ffmpeg_filter(path: Path, audio_filter: str, settings: Settings, what: str) -> None:
+    """Apply an FFmpeg audio filter in place. These are improvements, not requirements:
+    if FFmpeg fails, the original clip is kept."""
+    tmp = path.with_suffix(".tmp.wav")
     try:
         subprocess.run(
             [
                 settings.ffmpeg_path, "-y", "-hide_banner", "-loglevel", "error",
-                "-i", str(path), "-filter:a", f"atempo={tempo:.4f}", "-c:a", "pcm_s16le", str(tmp),
+                "-i", str(path), "-filter:a", audio_filter, "-c:a", "pcm_s16le", str(tmp),
             ],
             check=True,
             capture_output=True,
         )  # fmt: skip
         tmp.replace(path)
     except (OSError, subprocess.CalledProcessError) as exc:
-        # Pacing is a readability improvement, not a requirement: keep the original clip.
-        log.warning("Couldn't adjust speech pace for %s: %s", path, exc)
+        log.warning("Couldn't %s for %s: %s", what, path, exc)
         tmp.unlink(missing_ok=True)
+
+
+def pace_clip(
+    path: Path,
+    word_count: int,
+    settings: Settings,
+    window: tuple[float, float] = (MIN_WPS, MAX_WPS),
+    nearest_edge: bool = False,
+) -> None:
+    """Time-stretch a clip into the words-per-second window, keeping its pitch.
+
+    Read lines go to the window's middle. Acted lines (`nearest_edge`) only go as far as the
+    nearest edge, so a deliberately slow or fast delivery keeps as much of its feel as it can.
+    """
+    if word_count < MIN_WORDS_TO_PACE:
+        return
+    rate = speech_rate(path, word_count)
+    if window[0] <= rate <= window[1]:
+        return
+    target = min(max(rate, window[0]), window[1]) if nearest_edge else sum(window) / 2
+    # atempo > 1 speeds up; playing at target/rate turns `rate` into `target`.
+    tempo = min(max(target / rate, 0.5), 2.0)
+    _ffmpeg_filter(path, f"atempo={tempo:.4f}", settings, "adjust speech pace")
+
+
+def shift_pitch(path: Path, semitones: float, settings: Settings) -> None:
+    """Raise (or lower) a voice's pitch and formants together, which makes it sound like a
+    smaller (younger) or bigger speaker rather than just higher. Needs FFmpeg with rubberband."""
+    ratio = 2 ** (semitones / 12)
+    _ffmpeg_filter(path, f"rubberband=pitch={ratio:.4f}:formant=shifted", settings, "shift the voice's pitch")
 
 
 def _kokoro(text: str, voice: str, out_path: Path) -> None:
@@ -152,6 +233,61 @@ def _piper(text: str, voice: str, out_path: Path, settings: Settings) -> None:
             piper_voice.synthesize_wav(text, wav)
         else:
             piper_voice.synthesize(text, wav)
+
+
+def _chatterbox_speak(
+    text: str, reference: Path, mood: str | None, seed: int, out_path: Path, settings: Settings
+) -> None:
+    """Act one line in the reference clip's voice. Each reference is prepared once and reused;
+    the seed comes from the line, so re-rendering an unchanged line gives the same take."""
+    try:
+        import soundfile as sf
+        import torch
+        from chatterbox.tts import ChatterboxTTS
+    except ImportError as exc:
+        raise TTSError(
+            "Expressive voices aren't installed. Run: pip install -r requirements-expressive.txt"
+        ) from exc
+    if not reference.exists():
+        raise TTSError(f"Expressive voice reference not found: {reference}")
+    model = _chatterbox.get("model")
+    if model is None:
+        try:
+            model = ChatterboxTTS.from_pretrained(device=settings.expressive_device)
+        except (RuntimeError, AssertionError) as exc:  # e.g. no CUDA device
+            raise TTSError(
+                f"Couldn't start expressive voices on '{settings.expressive_device}': {exc}"
+            ) from exc
+        _chatterbox["model"] = model
+    key = str(reference)
+    if key not in _chatterbox:
+        model.prepare_conditionals(key)
+        _chatterbox[key] = model.conds
+    model.conds = _chatterbox[key]
+    torch.manual_seed(seed)
+    wav = model.generate(
+        text, exaggeration=EXPRESSIVE_INTENSITY.get(mood or "", 0.5), cfg_weight=EXPRESSIVE_CFG
+    )
+    sf.write(str(out_path), wav.squeeze(0).cpu().numpy(), model.sr, subtype="PCM_16")
+
+
+@functools.cache
+def _expressive_check(device: str) -> tuple[bool, str]:
+    if importlib.util.find_spec("chatterbox") is None:
+        return False, "Not installed (pip install -r requirements-expressive.txt)"
+    if device.startswith("cuda"):
+        import torch
+
+        if not torch.cuda.is_available():
+            return False, "Needs an NVIDIA graphics card"
+        return True, f"Chatterbox on {torch.cuda.get_device_name(0)}"
+    return True, f"Chatterbox on {device} (slow)"
+
+
+def expressive_status(settings: Settings) -> dict:
+    """Whether this laptop can use the Expressive voice style. Checked once per device."""
+    ok, detail = _expressive_check(settings.expressive_device)
+    return {"ok": ok, "detail": detail}
 
 
 def _dummy(text: str, character: Character, out_path: Path, words_per_second: float = TARGET_WPS) -> None:

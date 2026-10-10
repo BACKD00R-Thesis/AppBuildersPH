@@ -9,7 +9,11 @@ from fastapi.responses import FileResponse
 from app.assets import Background, Character, load_backgrounds, load_characters
 from app.config import Settings, get_settings
 from app.deps import require_token
+from app.models import VoiceStyle
 from app.pipeline import tts
+
+# How each role's "Hear sample" line is acted with expressive voices.
+SAMPLE_MOODS = {"asker": "curious", "explainer": "explain"}
 
 router = APIRouter(prefix="/assets", tags=["assets"], dependencies=[Depends(require_token)])
 
@@ -27,25 +31,29 @@ def characters(settings: Settings = Depends(get_settings)) -> list[dict]:
 
 
 @router.get("/characters/{character_id}/image")
-def character_image(character_id: str, settings: Settings = Depends(get_settings)) -> FileResponse:
+def character_image(
+    character_id: str, mood: str | None = None, settings: Settings = Depends(get_settings)
+) -> FileResponse:
+    """The character's art: one expression (`?mood=explain`), or the default one."""
     character = get_character(character_id, settings)
-    if character.image is None:
+    image = character.image_for(mood)
+    if image is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "No image for this character")
-    return FileResponse(character.image, media_type="image/png")
+    return FileResponse(image, media_type="image/png")
 
 
 @router.get("/characters/{character_id}/sample")
-def character_sample(character_id: str, settings: Settings = Depends(get_settings)) -> FileResponse:
-    """A short line in this character's voice ("Hear sample"). Synthesized once, then cached."""
+def character_sample(
+    character_id: str, style: VoiceStyle = VoiceStyle.QUICK, settings: Settings = Depends(get_settings)
+) -> FileResponse:
+    """A short line in this character's voice ("Hear sample") in a voice style, cached after the first."""
     character = get_character(character_id, settings)
-    path = (
-        settings.data_dir
-        / "samples"
-        / f"{character.id}-{tts.audio_key(character.sample, character, settings)}.wav"
-    )
+    mood = SAMPLE_MOODS.get(character.role)
+    key = tts.audio_key(character.sample, character, settings, style, mood)
+    path = settings.data_dir / "samples" / f"{character.id}-{key}.wav"
     if not path.exists():
         try:
-            tts.synthesize(character.sample, character, path, settings)
+            tts.synthesize(character.sample, character, path, settings, style, mood)
         except tts.TTSError as exc:
             raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, str(exc)) from exc
     return FileResponse(path, media_type="audio/wav")
@@ -67,7 +75,9 @@ def background_video(background_id: str, settings: Settings = Depends(get_settin
         ".mov": "video/quicktime",
         ".webm": "video/webm",
     }
-    return FileResponse(background.file, media_type=media_types.get(background.file.suffix.lower(), "video/mp4"))
+    return FileResponse(
+        background.file, media_type=media_types.get(background.file.suffix.lower(), "video/mp4")
+    )
 
 
 def _background_manifest(settings: Settings) -> Path:

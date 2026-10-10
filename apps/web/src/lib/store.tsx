@@ -1,8 +1,8 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { api, type Background, type Health, type ProjectSummary } from './api'
 import { play } from './audio'
-import { fallbackBackground } from './options'
-import type { BackgroundId, NewVideoDraft, Speaker, Video } from './types'
+import { fallbackBackground, TAGLISH_ENABLED } from './options'
+import type { BackgroundId, NewVideoDraft, Speaker, Video, VoiceStyle } from './types'
 import { isActive, toVideo } from './videos'
 
 /**
@@ -35,12 +35,12 @@ interface Store {
   updateDraft: (patch: Partial<NewVideoDraft>) => void
   /** Upload the file (or notes) and start writing the script. Resolves with the new video id. */
   startNewVideo: (input?: Partial<NewVideoDraft>) => Promise<string>
-  playVoiceSample: (speaker: Speaker) => Promise<void>
+  playVoiceSample: (speaker: Speaker, style?: VoiceStyle) => Promise<void>
 }
 
 const StoreContext = createContext<Store | null>(null)
 
-const EMPTY_DRAFT: NewVideoDraft = { file: null, notes: '', lengthSec: 60, taglish: true }
+const EMPTY_DRAFT: NewVideoDraft = { file: null, notes: '', lengthSec: 60, taglish: TAGLISH_ENABLED }
 
 export function StoreProvider({ children }: { children: ReactNode }) {
   const [projects, setProjects] = useState<ProjectSummary[]>([])
@@ -138,7 +138,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   )
 
   const playVoiceSample = useCallback<Store['playVoiceSample']>(
-    (speaker) => play(`sample:${speaker}`, api.sampleUrl(speaker)),
+    (speaker, style = 'quick') => play(`sample:${speaker}`, api.sampleUrl(speaker, style)),
     [],
   )
 

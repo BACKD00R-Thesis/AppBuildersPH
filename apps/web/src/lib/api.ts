@@ -2,7 +2,7 @@
  * Client for the local engine (FastAPI, server/). Everything is same-origin under /api:
  * in production the server serves this app, in `npm run dev` Vite proxies /api to it.
  */
-import type { CaptionStyle, VideoLength } from './types'
+import type { CaptionStyle, VideoLength, VoiceStyle } from './types'
 
 export type ProjectStatus = 'ready' | 'generating' | 'scripted' | 'failed'
 export type ScriptStep = 'ideas' | 'jokes' | 'check'
@@ -66,6 +66,7 @@ export interface Project {
   key_ideas: string[]
   background_id: string | null
   caption_style: CaptionStyle
+  voice_style: VoiceStyle
   lines: ApiLine[]
   renders: Render[]
   video: Render | null
@@ -90,6 +91,8 @@ export interface Character {
   vibe: string
   color: string
   has_image: boolean
+  /** Expressions with their own art, e.g. "explain", "gets". */
+  moods: string[]
 }
 
 export interface EngineStatus {
@@ -104,6 +107,8 @@ export interface Health {
   auth_ok: boolean
   ready: boolean
   engines: Record<'llm' | 'tts' | 'alignment' | 'ffmpeg', EngineStatus>
+  /** Optional Expressive voices (Chatterbox). Not part of `ready`. */
+  expressive?: EngineStatus
 }
 
 export interface LineDraft {
@@ -198,7 +203,14 @@ export const api = {
   },
   updateProject: (
     id: string,
-    patch: Partial<{ title: string; background_id: string; caption_style: CaptionStyle; taglish: boolean; length_s: VideoLength }>,
+    patch: Partial<{
+      title: string
+      background_id: string
+      caption_style: CaptionStyle
+      voice_style: VoiceStyle
+      taglish: boolean
+      length_s: VideoLength
+    }>,
   ) => request<Project>(`/projects/${id}`, json('PATCH', patch)),
   deleteProject: (id: string) => request<void>(`/projects/${id}`, { method: 'DELETE' }),
 
@@ -217,5 +229,8 @@ export const api = {
   mediaUrl: (path: string) => withToken(path),
   videoUrl: (render: Render, download = false) =>
     withToken(`${render.video_url ?? `${BASE}/renders/${render.id}/video`}${download ? '?download=1' : ''}`),
-  sampleUrl: (characterId: string) => withToken(`${BASE}/assets/characters/${characterId}/sample`),
+  sampleUrl: (characterId: string, style: VoiceStyle = 'quick') =>
+    withToken(`${BASE}/assets/characters/${characterId}/sample?style=${style}`),
+  characterImageUrl: (characterId: string, mood?: string) =>
+    withToken(`${BASE}/assets/characters/${characterId}/image${mood ? `?mood=${encodeURIComponent(mood)}` : ''}`),
 }

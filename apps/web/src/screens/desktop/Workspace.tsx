@@ -9,12 +9,13 @@ import { ScriptSteps, useSecondsLeft } from '../../components/ScriptProgress'
 import { ScriptList, useScriptEditing } from '../../components/ScriptList'
 import { Segmented } from '../../components/Segmented'
 import { Toggle } from '../../components/Toggle'
+import { VoiceStylePicker } from '../../components/VoiceStylePicker'
 import { VideoFrame } from '../../components/VideoFrame'
 import { DesktopShell } from '../../layouts/DesktopShell'
 import { usePlaying } from '../../lib/audio'
 import { cn } from '../../lib/cn'
 import { captionFromText } from '../../lib/format'
-import { captionStyles } from '../../lib/options'
+import { captionStyles, TAGLISH_ENABLED } from '../../lib/options'
 import { speakerIds, speakerOf } from '../../lib/speakers'
 import { useStore } from '../../lib/store'
 import { useProject } from '../../lib/useProject'
@@ -136,7 +137,7 @@ export function Workspace() {
               background={background}
               caption={captionFromText(firstLine ?? video.title)}
               captionSize={25}
-              avatars={{ size: 36, fontSize: 13 }}
+              cast
               className="h-[498px] w-[280px] rounded-[18px]"
             />
             <p className="text-muted text-[13px] whitespace-nowrap">Updates as you edit</p>
@@ -147,6 +148,7 @@ export function Workspace() {
 
             <div className="flex w-full flex-col gap-3">
               <h3 className="eyebrow text-green-2">Voices</h3>
+              <VoiceStylePicker value={project.voice_style} onChange={(voice_style) => updateStyle({ voice_style })} />
               {speakerIds.map((speaker) => (
                 <div key={speaker} className="flex w-full items-center gap-[10px]">
                   <Avatar speaker={speaker} size={34} fontSize={12} />
@@ -156,7 +158,7 @@ export function Workspace() {
                   </div>
                   <button
                     type="button"
-                    onClick={() => playVoiceSample(speaker).catch((err) => setError(String(err?.message ?? err)))}
+                    onClick={() => playVoiceSample(speaker, project.voice_style).catch((err) => setError(String(err?.message ?? err)))}
                     aria-label={`Hear ${speakerOf(speaker).name}`}
                     aria-pressed={playing === `sample:${speaker}`}
                     className={cn(
@@ -240,16 +242,18 @@ export function Workspace() {
               />
             </div>
 
-            <div className="flex w-full items-center gap-3">
-              <div className="flex min-w-0 flex-1 flex-col gap-[2px] whitespace-nowrap">
-                <p className="text-ink text-[15px] font-semibold">Taglish mode</p>
-                <p className="text-muted text-[13px]">
-                  {/* Language is decided when the script is written. */}
-                  English and Filipino jokes
-                </p>
+            {TAGLISH_ENABLED && (
+              <div className="flex w-full items-center gap-3">
+                <div className="flex min-w-0 flex-1 flex-col gap-[2px] whitespace-nowrap">
+                  <p className="text-ink text-[15px] font-semibold">Taglish mode</p>
+                  <p className="text-muted text-[13px]">
+                    {/* Language is decided when the script is written. */}
+                    English and Filipino jokes
+                  </p>
+                </div>
+                <Toggle label="Taglish mode" checked={project.taglish} onChange={(taglish) => updateStyle({ taglish })} />
               </div>
-              <Toggle label="Taglish mode" checked={project.taglish} onChange={(taglish) => updateStyle({ taglish })} />
-            </div>
+            )}
 
             <div className="min-h-px flex-1" />
 

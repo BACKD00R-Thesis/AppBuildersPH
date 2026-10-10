@@ -29,7 +29,7 @@ def test_init_db_upgrades_an_older_database(tmp_path, monkeypatch):
     with Session(get_engine()) as session:
         project = session.get(Project, "p1")
         assert project.caption_style == CaptionStyle.BOLD_POP
-        assert project.taglish is True
+        assert project.taglish is False
         assert project.length_s == 60
         assert project.source_kind == "pdf"
         assert not project.key_ideas

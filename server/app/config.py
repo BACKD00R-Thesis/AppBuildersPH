@@ -44,6 +44,8 @@ class Settings(BaseSettings):
     kokoro_voice_b: str = ""
     piper_voice_a: str = ""
     piper_voice_b: str = ""
+    # Optional "Expressive" voices (Chatterbox, requirements-expressive.txt): cuda, or cpu (very slow)
+    expressive_device: str = "cuda"
 
     whisper_model: str = "small"
     whisper_device: str = "cpu"

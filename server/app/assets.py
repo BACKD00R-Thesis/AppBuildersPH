@@ -22,7 +22,14 @@ class Character:
     vibe: str = ""  # short description shown in the app, e.g. "Loud and slow"
     sample: str = "Hello! Let's study this together."  # line used for "Hear sample"
     voices: dict[str, str] = field(default_factory=dict)  # engine -> voice id / model file
-    image: str | None = None  # path to a transparent PNG, if any
+    image: str | None = None  # path to a transparent PNG, if any (the default expression)
+    moods: dict[str, str] = field(default_factory=dict)  # expression -> path to its PNG
+    max_words: int | None = None  # longest line the script may give this character
+    # Semitones to move the quick voices' pitch and formants (+4 turns an adult voice into a kid's)
+    pitch_shift: float = 0
+
+    def image_for(self, mood: str | None) -> str | None:
+        return self.moods.get(mood or "", self.image)
 
     def public(self) -> dict:
         return {
@@ -32,6 +39,7 @@ class Character:
             "vibe": self.vibe,
             "color": self.color,
             "has_image": self.image is not None,
+            "moods": sorted(self.moods),
         }
 
 
@@ -72,6 +80,9 @@ def load_characters(settings: Settings) -> list[Character]:
     for entry in _read_manifest(base / "manifest.json"):
         image = entry.get("image")
         image_path = base / image if image and (base / image).exists() else None
+        moods = {
+            mood: str(base / file) for mood, file in entry.get("moods", {}).items() if (base / file).exists()
+        }
         characters.append(
             Character(
                 id=entry["id"],
@@ -83,6 +94,9 @@ def load_characters(settings: Settings) -> list[Character]:
                 sample=entry.get("sample", Character.sample),
                 voices=dict(entry.get("voices", {})),
                 image=str(image_path) if image_path else None,
+                moods=moods,
+                max_words=entry.get("max_words"),
+                pitch_shift=entry.get("pitch_shift", 0),
             )
         )
     _apply_voice_overrides(characters, settings)

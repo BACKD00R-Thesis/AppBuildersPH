@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { api, type Project } from './api'
 import { useStore } from './store'
-import type { CaptionStyle, Video } from './types'
+import type { CaptionStyle, Video, VoiceStyle } from './types'
 import { isActive, projectVideo } from './videos'
 
 const POLL_MS = 1200
@@ -52,7 +52,9 @@ export function useProject(id: string | undefined) {
   )
 
   const updateStyle = useCallback(
-    async (patch: Partial<{ background_id: string; caption_style: CaptionStyle; taglish: boolean }>) => {
+    async (
+      patch: Partial<{ background_id: string; caption_style: CaptionStyle; voice_style: VoiceStyle; taglish: boolean }>,
+    ) => {
       if (!id) return
       setProject((p) => (p ? { ...p, ...patch } : p)) // instant feedback; the server copy follows
       try {

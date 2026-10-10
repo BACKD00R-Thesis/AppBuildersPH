@@ -8,7 +8,7 @@ from app import workflow
 from app.config import Settings, get_settings
 from app.db import get_session
 from app.deps import require_token
-from app.models import Line
+from app.models import Line, Project
 from app.pipeline.tts import TTSError, wav_duration
 from app.schemas import API_PREFIX, AudioOut
 
@@ -33,8 +33,12 @@ def preview(
     character = workflow.characters_by_id(settings).get(line.character_id)
     if character is None:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, f"Unknown character '{line.character_id}'")
+    project = session.get(Project, line.project_id)
+    cast = workflow.characters_by_id(settings)
+    mood = workflow.speaking_moods(workflow.ordered_lines(session, line.project_id), cast).get(line.id)
+    style = project.voice_style if project else "quick"
     try:
-        path = workflow.ensure_line_audio(session, line, character, settings)
+        path = workflow.ensure_line_audio(session, line, character, settings, style, mood)
     except TTSError as exc:
         raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, str(exc)) from exc
     # The key in the URL busts any player cache when the text changes.

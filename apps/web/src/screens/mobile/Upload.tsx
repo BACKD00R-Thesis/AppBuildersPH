@@ -8,7 +8,7 @@ import { Toggle } from '../../components/Toggle'
 import { ACCEPTED_FILES } from '../../layouts/DesktopShell'
 import { MobileBottomBar, MobileShell, MobileTitleRow } from '../../layouts/MobileShell'
 import { fileSize } from '../../lib/format'
-import { keyIdeasForLength, videoLengths } from '../../lib/options'
+import { keyIdeasForLength, TAGLISH_ENABLED, videoLengths } from '../../lib/options'
 import { useStore } from '../../lib/store'
 
 /** Figma: Mobile v2 / Upload (14:99). The design only shows the "file selected" state. */
@@ -121,13 +121,15 @@ export function Upload() {
         </p>
       </div>
 
-      <div className="bg-mint rounded-card flex w-full shrink-0 items-center gap-3 p-4">
-        <div className="flex min-w-0 flex-1 flex-col gap-[2px] whitespace-nowrap">
-          <p className="text-ink text-[15px] font-semibold">Taglish mode</p>
-          <p className="text-muted text-[13px]">English and Filipino jokes</p>
+      {TAGLISH_ENABLED && (
+        <div className="bg-mint rounded-card flex w-full shrink-0 items-center gap-3 p-4">
+          <div className="flex min-w-0 flex-1 flex-col gap-[2px] whitespace-nowrap">
+            <p className="text-ink text-[15px] font-semibold">Taglish mode</p>
+            <p className="text-muted text-[13px]">English and Filipino jokes</p>
+          </div>
+          <Toggle label="Taglish mode" checked={draft.taglish} onChange={(taglish) => updateDraft({ taglish })} />
         </div>
-        <Toggle label="Taglish mode" checked={draft.taglish} onChange={(taglish) => updateDraft({ taglish })} />
-      </div>
+      )}
     </MobileShell>
   )
 }
